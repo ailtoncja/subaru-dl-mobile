@@ -120,11 +120,7 @@ fun OrganizeSelect(value: String, custom: String, onChange: (String, String) -> 
 }
 
 @Composable
-fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = C.BlueLight, unfocusedBorderColor = C.BorderStrong, focusedContainerColor = C.Field, unfocusedContainerColor = C.Field,
-    focusedTextColor = C.Text, unfocusedTextColor = C.Text, cursorColor = C.Gold, focusedLabelColor = C.BluePale, unfocusedLabelColor = C.Muted,
-    focusedSupportingTextColor = C.Muted, unfocusedSupportingTextColor = C.Muted,
-)
+fun fieldColors() = com.subarudl.app.ui.components.textFieldColors()
 
 /** Escolha da faixa de áudio (a original é sempre a padrão). */
 @Composable

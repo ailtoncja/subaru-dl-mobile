@@ -60,7 +60,9 @@ import com.subarudl.app.ui.components.BtnGhost
 import com.subarudl.app.ui.components.BtnPrimary
 import com.subarudl.app.ui.components.CheckSubaru
 import com.subarudl.app.ui.components.DropField
+import com.subarudl.app.ui.components.LinkField
 import com.subarudl.app.ui.components.Mono
+import com.subarudl.app.ui.components.ScreenTitle
 import com.subarudl.app.ui.components.Opt
 import com.subarudl.app.ui.components.SCard
 import com.subarudl.app.ui.components.SectionLabel
@@ -87,45 +89,16 @@ fun GalleryScreen(vm: MainViewModel) {
     val o = vm.galOptions
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(5.dp).height(30.dp).clip(RoundedCornerShape(3.dp)).background(C.Gold))
-                Spacer(Modifier.width(8.dp))
-                Text("Galeria", style = T.headlineLg)
-            }
-            Text("Perfis, posts, álbuns e capítulos de mangá — pelo gallery-dl", style = T.bodySm.copy(fontSize = 14.sp), color = C.Muted, modifier = Modifier.padding(top = 4.dp))
-        }
+        item { ScreenTitle("Galeria", "Perfis, posts, álbuns e capítulos de mangá — pelo gallery-dl.") }
 
         item {
             SCard(padding = 14.dp) {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.Field).border(1.dp, C.Border, RoundedCornerShape(8.dp)).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.Link, null, Modifier.size(22.dp), tint = C.Muted)
-                    Spacer(Modifier.width(10.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (vm.galText.isEmpty()) Text("Perfil, post ou álbum (vários, um por linha)", style = T.bodySm.copy(fontSize = 14.sp), color = C.Dim)
-                        BasicTextField(
-                            vm.galText, { vm.galText = it }, textStyle = T.bodyMd.copy(color = C.Text, fontFamily = Manrope), cursorBrush = SolidColor(C.Gold), maxLines = 5,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        )
-                    }
-                    if (vm.galText.isNotEmpty()) {
-                        Box(Modifier.size(36.dp).clip(RoundedCornerShape(6.dp)).clickable { vm.galText = "" }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, null, Modifier.size(18.dp), tint = C.Muted) }
-                    }
-                    Row(
-                        Modifier.height(38.dp).clip(RoundedCornerShape(6.dp)).background(C.Blue).clickable {
-                            val t = clipboard.getText()?.text.orEmpty()
-                            if (t.contains("http")) vm.galText = (vm.galText + "\n" + t).trim() else vm.toast("Nenhum link na área de transferência")
-                        }.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Outlined.ContentPaste, null, Modifier.size(17.dp), tint = Color.White)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Colar", style = T.labelMd.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = Color.White)
-                    }
-                }
+                LinkField(vm.galText, { vm.galText = it }, "Perfil, post ou álbum (vários, um por linha)", maxLines = 5)
+                Spacer(Modifier.height(10.dp))
+                BtnGhost("Colar da área de transferência", {
+                    val t = clipboard.getText()?.text.orEmpty()
+                    if (t.contains("http")) vm.galText = (vm.galText + "\n" + t).trim() else vm.toast("Nenhum link na área de transferência")
+                }, Modifier.fillMaxWidth(), icon = Icons.Outlined.ContentPaste, height = 44.dp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BtnGhost("Ver arquivos", { vm.galleryPrepare(vm.galText) }, Modifier.weight(1f), icon = Icons.Outlined.Visibility, enabled = vm.galText.isNotBlank(), height = 52.dp)

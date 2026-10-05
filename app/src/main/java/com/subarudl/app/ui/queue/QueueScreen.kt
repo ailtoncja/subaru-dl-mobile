@@ -82,7 +82,7 @@ import com.subarudl.app.ui.components.ProgressTrack
 import com.subarudl.app.ui.components.SCard
 import com.subarudl.app.ui.components.SectionLabel
 import com.subarudl.app.ui.components.Sparkline
-import com.subarudl.app.ui.components.TabPill
+import com.subarudl.app.ui.components.Tabs
 import com.subarudl.app.ui.components.Thumb
 import com.subarudl.app.ui.theme.C
 import com.subarudl.app.ui.theme.T
@@ -176,11 +176,10 @@ fun QueueScreen(vm: MainViewModel) {
 
         // ---- Abas e filtro ----
         item {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.Card).border(1.dp, C.Border, RoundedCornerShape(10.dp)).padding(4.dp)) {
-                TabPill("Baixando", live.size, tab == QueueTab.ACTIVE) { vm.queueTab = QueueTab.ACTIVE }
-                TabPill("Concluídos", done.size, tab == QueueTab.DONE) { vm.queueTab = QueueTab.DONE }
-                TabPill("Falhas", failed.size, tab == QueueTab.FAILED) { vm.queueTab = QueueTab.FAILED }
-            }
+            Tabs(
+                listOf("Baixando" to live.size, "Concluídos" to done.size, "Falhas" to failed.size),
+                selected = tab.ordinal, onSelect = { vm.queueTab = QueueTab.entries[it] },
+            )
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

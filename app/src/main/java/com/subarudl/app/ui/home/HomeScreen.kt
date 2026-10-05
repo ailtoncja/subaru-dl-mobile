@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -44,6 +43,8 @@ import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,6 +80,10 @@ import com.subarudl.app.ui.components.CheckSubaru
 import com.subarudl.app.ui.components.DarkBadge
 import com.subarudl.app.ui.components.DropField
 import com.subarudl.app.ui.components.HRow
+import com.subarudl.app.ui.components.LinkField
+import com.subarudl.app.ui.components.ScreenTitle
+import com.subarudl.app.ui.components.IconTile
+import com.subarudl.app.ui.components.textFieldColors
 import com.subarudl.app.ui.components.IconBtn
 import com.subarudl.app.ui.components.Mono
 import com.subarudl.app.ui.components.ProgressTrack
@@ -125,25 +130,14 @@ fun HomeScreen(vm: MainViewModel) {
     ) {
         // ---- Título e estado ----
         item {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Text("Central de Downloads", style = T.headlineLg)
-                    Text("Pronto para capturar fluxos em alta definição", style = T.bodySm.copy(fontSize = 14.sp), color = C.Muted)
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Badge(if (settings.turbo) "Turbo aria2" else "yt-dlp ${engine.ytdlp ?: "…"}", color = C.Gold)
-                    Row(
-                        Modifier.clip(RoundedCornerShape(10.dp)).background(C.Card).border(1.dp, C.Border, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (net.online) C.CyanPale else C.ErrorStrong))
-                        Spacer(Modifier.width(8.dp))
-                        Column(horizontalAlignment = Alignment.End) {
-                            Mono(if (net.online) "ONLINE" else "OFFLINE", color = if (net.online) C.CyanPale else C.ErrorStrong, style = T.labelSm.copy(fontWeight = FontWeight.Bold))
-                            Mono(formatSpeed(speed), color = C.Muted)
-                        }
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ScreenTitle("Central de Downloads", "Cole o link de um vídeo, música ou perfil e baixe em alta qualidade.")
+                HRow(gap = 8.dp) {
+                    StatusChip(
+                        if (net.online) "Online • ${net.label}" else "Offline", if (net.online) C.CyanPale else C.ErrorStrong,
+                    )
+                    StatusChip("↓ ${formatSpeed(speed)}", C.Text)
+                    StatusChip(if (settings.turbo) "Turbo aria2" else "yt-dlp ${engine.ytdlp ?: "…"}", C.Gold)
                 }
             }
         }
@@ -152,47 +146,16 @@ fun HomeScreen(vm: MainViewModel) {
         item {
             SCard(padding = 16.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Bolt, null, Modifier.size(20.dp), tint = C.BluePale)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Link do Vídeo ou Áudio", style = T.labelLg, color = C.Text, modifier = Modifier.weight(1f))
-                    Badge("Detecção Rápida")
-                }
-                Spacer(Modifier.height(14.dp))
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.Field).border(1.dp, C.Border, RoundedCornerShape(8.dp)).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.Link, null, Modifier.size(22.dp), tint = C.Muted)
-                    Spacer(Modifier.width(10.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (vm.homeUrl.isEmpty()) Text("https://youtu.be/…", style = T.bodyMd, color = C.Dim)
-                        BasicTextField(
-                            value = vm.homeUrl,
-                            onValueChange = { vm.homeUrl = it },
-                            textStyle = T.bodyMd.copy(color = C.Text, fontFamily = Manrope),
-                            cursorBrush = SolidColor(C.Gold),
-                            maxLines = 3,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(onGo = { vm.analyze(vm.homeUrl) }),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        )
-                    }
-                    if (vm.homeUrl.isNotEmpty()) {
-                        IconBtn(Icons.Filled.Close, { vm.clearHome() }, size = 36.dp, background = Color.Transparent, tint = C.Muted)
-                    }
-                    Row(
-                        Modifier.height(38.dp).clip(RoundedCornerShape(6.dp)).background(C.Blue).clickable {
-                            val text = clipboard.getText()?.text.orEmpty()
-                            if (text.contains("http")) vm.analyze(text) else vm.toast("Nenhum link na área de transferência")
-                        }.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Outlined.ContentPaste, null, Modifier.size(17.dp), tint = Color.White)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Colar", style = T.labelMd.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+                    IconTile(Icons.Outlined.Bolt, size = 36.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Link do vídeo ou áudio", style = T.title)
+                        Text("Detecção rápida em mais de 1.800 sites", style = T.labelMd)
                     }
                 }
                 Spacer(Modifier.height(14.dp))
+                LinkField(vm.homeUrl, { vm.homeUrl = it }, "https://youtu.be/…", onClear = { vm.clearHome() }, onGo = { vm.analyze(vm.homeUrl) })
+                Spacer(Modifier.height(12.dp))
                 if (vm.homeLoading || (!engine.ready && engine.error == null)) {
                     Row(Modifier.fillMaxWidth().height(52.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(22.dp), color = C.Gold, strokeWidth = 2.5.dp)
@@ -200,7 +163,13 @@ fun HomeScreen(vm: MainViewModel) {
                         Text(if (vm.homeLoading) "Lendo o link…" else "Preparando as ferramentas (só na primeira vez)…", style = T.labelLg, color = C.Muted)
                     }
                 } else {
-                    BtnPrimary("Capturar Mídia", { vm.analyze(vm.homeUrl) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Download, enabled = vm.homeUrl.isNotBlank())
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        BtnGhost("Colar", {
+                            val text = clipboard.getText()?.text.orEmpty()
+                            if (text.contains("http")) vm.analyze(text) else vm.toast("Nenhum link na área de transferência")
+                        }, Modifier.weight(0.8f), icon = Icons.Outlined.ContentPaste, height = 52.dp)
+                        BtnPrimary("Capturar mídia", { vm.analyze(vm.homeUrl) }, Modifier.weight(1.4f), icon = Icons.Outlined.Download, enabled = vm.homeUrl.isNotBlank())
+                    }
                 }
                 if (engine.error != null) {
                     Spacer(Modifier.height(10.dp))
@@ -208,11 +177,11 @@ fun HomeScreen(vm: MainViewModel) {
                 }
                 vm.homeError?.let {
                     Spacer(Modifier.height(12.dp))
-                    Text(it, style = T.bodySm.copy(fontSize = 14.sp), color = C.Error)
+                    Text(it, style = T.bodyMd, color = C.Error)
                     vm.homeHint?.let { h -> Text(h, style = T.bodySm, color = C.Muted, modifier = Modifier.padding(top = 4.dp)) }
                 }
-                Spacer(Modifier.height(14.dp))
-                SectionLabel("Canais compatíveis:")
+                Spacer(Modifier.height(16.dp))
+                SectionLabel("Canais compatíveis")
                 Spacer(Modifier.height(8.dp))
                 HRow(gap = 8.dp) {
                     SiteChip("YouTube", Icons.Outlined.PlayCircleOutline, C.ErrorStrong)
@@ -419,4 +388,14 @@ private fun ActionCard(vm: MainViewModel, o: DownloadOptions, onAdvanced: () -> 
         Spacer(Modifier.height(10.dp))
         BtnGhost("Adicionar à fila", { vm.downloadHome(false) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.PlaylistAdd)
     }
+}
+
+/** Chip de estado (online, velocidade, versão): só informa, não é clicável. */
+@Composable
+private fun StatusChip(text: String, color: Color) {
+    Text(
+        text,
+        Modifier.clip(RoundedCornerShape(10.dp)).background(C.Container).border(1.dp, C.Border, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 7.dp),
+        style = T.labelLg.copy(fontSize = 12.5.sp), color = color, maxLines = 1,
+    )
 }

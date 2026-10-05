@@ -1,11 +1,9 @@
 package com.subarudl.app.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,12 +25,37 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,12 +65,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -55,6 +77,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,30 +86,30 @@ import coil3.compose.AsyncImage
 import com.subarudl.app.ui.theme.C
 import com.subarudl.app.ui.theme.T
 
+private val Stadium = RoundedCornerShape(50)
+
 // ---------- Cartões ----------
 
+/** Cartão tonal do Material 3. Com [accent], ganha uma faixa de cor na lateral. */
 @Composable
 fun SCard(
     modifier: Modifier = Modifier,
     accent: Color? = null,
     padding: Dp = 16.dp,
     onClick: (() -> Unit)? = null,
+    @Suppress("UNUSED_PARAMETER") bar: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(12.dp)
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = shape,
-        color = C.Card,
-        border = BorderStroke(1.dp, C.Border),
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-    ) {
+    val colors = CardDefaults.cardColors(containerColor = C.Card)
+    val border = BorderStroke(1.dp, C.Border)
+    val inner: @Composable () -> Unit = {
         Box {
-            Column(Modifier.padding(start = if (accent != null) padding + 3.dp else padding, end = padding, top = padding, bottom = padding), content = content)
-            if (accent != null) Box(Modifier.align(Alignment.CenterStart).width(3.dp).fillMaxHeight().background(accent))
+            Column(Modifier.padding(start = if (accent != null) padding + 4.dp else padding, end = padding, top = padding, bottom = padding), content = content)
+            if (accent != null) Box(Modifier.align(Alignment.CenterStart).width(4.dp).fillMaxHeight().background(accent))
         }
     }
+    if (onClick != null) Card(onClick, modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = colors, border = border) { inner() }
+    else Card(modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = colors, border = border) { inner() }
 }
 
 @Composable
@@ -94,9 +117,15 @@ fun Mono(text: String, modifier: Modifier = Modifier, color: Color = C.Muted, st
     Text(text, modifier, color = color, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
+/** Números que mudam (velocidade, tempo, tamanho), em fonte de largura fixa. */
+@Composable
+fun Num(text: String, modifier: Modifier = Modifier, color: Color = C.Text, size: Int = 13, maxLines: Int = 1) {
+    Text(text, modifier, color = color, style = T.number.copy(fontSize = size.sp), maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+}
+
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier, color: Color = C.Muted) {
-    Text(text.uppercase(), modifier, color = color, style = T.labelMd.copy(letterSpacing = 1.sp))
+    Text(text.uppercase(), modifier, color = color, style = T.labelMd.copy(letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold))
 }
 
 // ---------- Selos ----------
@@ -105,133 +134,129 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, color: Color = C.M
 fun Badge(text: String, modifier: Modifier = Modifier, color: Color = C.Gold, background: Color = Color(0x26FACC15), border: Color = Color(0x4DFACC15)) {
     Text(
         text,
-        modifier = modifier.clip(RoundedCornerShape(4.dp)).background(background).border(1.dp, border, RoundedCornerShape(4.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
-        color = color, style = T.labelSm.copy(fontSize = 11.sp), maxLines = 1,
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(background).border(1.dp, border, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
+        color = color, style = T.labelSm.copy(fontWeight = FontWeight.SemiBold), maxLines = 1,
     )
 }
 
 @Composable
 fun BlueBadge(text: String, modifier: Modifier = Modifier) = Badge(text, modifier, color = C.BluePale, background = Color(0x331D4ED8), border = Color(0x4D3B82F6))
 
+/** Selo sobre imagens (fundo escuro translúcido para dar leitura). */
 @Composable
 fun DarkBadge(text: String, color: Color = C.Gold, modifier: Modifier = Modifier) =
     Text(
         text,
-        modifier = modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xCC000000)).padding(horizontal = 7.dp, vertical = 3.dp),
-        color = color, style = T.labelSm.copy(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold), maxLines = 1,
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xB3000000)).padding(horizontal = 8.dp, vertical = 3.dp),
+        color = color, style = T.labelSm.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Bold), maxLines = 1,
     )
 
 // ---------- Botões ----------
 
 @Composable
-fun BtnPrimary(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, enabled: Boolean = true, height: Dp = 52.dp) {
-    Row(
-        modifier.height(height).clip(RoundedCornerShape(8.dp))
-            .background(if (enabled) C.Blue else C.Blue.copy(alpha = 0.35f))
-            .border(1.dp, Color(0x663B82F6), RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Icon(icon, null, Modifier.size(22.dp), tint = Color.White)
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(text, style = T.button, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+private fun BtnContent(text: String, icon: ImageVector?, textStyle: TextStyle = T.button) {
+    if (icon != null) {
+        Icon(icon, null, Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
     }
+    Text(text, style = textStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+fun BtnPrimary(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, enabled: Boolean = true, height: Dp = 52.dp) {
+    Button(
+        onClick, modifier.heightIn(min = height), enabled = enabled, shape = Stadium,
+        colors = ButtonDefaults.buttonColors(containerColor = C.Blue, contentColor = Color.White, disabledContainerColor = C.Blue.copy(alpha = 0.3f), disabledContentColor = Color.White.copy(alpha = 0.5f)),
+    ) { BtnContent(text, icon) }
 }
 
 @Composable
 fun BtnGold(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, tag: String? = null, enabled: Boolean = true) {
-    Row(
-        modifier.height(54.dp).clip(RoundedCornerShape(8.dp)).background(if (enabled) C.GoldDeep else C.GoldDeep.copy(alpha = 0.4f))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+    Button(
+        onClick, modifier.heightIn(min = 54.dp), enabled = enabled, shape = Stadium,
+        colors = ButtonDefaults.buttonColors(containerColor = C.GoldDeep, contentColor = C.OnGold, disabledContainerColor = C.GoldDeep.copy(alpha = 0.3f), disabledContentColor = C.OnGold.copy(alpha = 0.5f)),
     ) {
-        if (icon != null) {
-            Icon(icon, null, Modifier.size(22.dp), tint = C.OnGold)
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(text, style = T.button, color = C.OnGold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        BtnContent(text, icon)
         if (tag != null) {
             Spacer(Modifier.width(10.dp))
-            Text(
-                tag, Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0x33000000)).padding(horizontal = 6.dp, vertical = 2.dp),
-                style = T.labelSm.copy(fontSize = 11.sp), color = C.OnGold,
-            )
+            Text(tag, Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x26000000)).padding(horizontal = 7.dp, vertical = 2.dp), style = T.labelSm.copy(fontWeight = FontWeight.Bold), color = C.OnGold)
         }
     }
 }
 
 @Composable
 fun BtnGhost(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, color: Color = C.Text, enabled: Boolean = true, height: Dp = 46.dp) {
-    Row(
-        modifier.height(height).clip(RoundedCornerShape(8.dp)).background(Color(0x0DFFFFFF)).border(1.dp, C.Border, RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Icon(icon, null, Modifier.size(19.dp), tint = if (enabled) color else C.Dim)
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(text, style = T.labelLg, color = if (enabled) color else C.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
+    FilledTonalButton(
+        onClick, modifier.heightIn(min = height), enabled = enabled, shape = Stadium,
+        colors = ButtonDefaults.filledTonalButtonColors(containerColor = C.CardHigh, contentColor = color, disabledContainerColor = C.Container, disabledContentColor = C.Dim),
+        contentPadding = ButtonDefaults.ContentPadding,
+    ) { BtnContent(text, icon, T.labelLg.copy(fontWeight = FontWeight.Bold)) }
 }
 
 @Composable
-fun IconBtn(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = C.Text, background: Color = Color(0x14FFFFFF), size: Dp = 40.dp, description: String? = null) {
-    Box(
-        modifier.size(size).clip(RoundedCornerShape(8.dp)).background(background).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, description, Modifier.size(size * 0.5f), tint = tint) }
+fun IconBtn(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = C.Text, background: Color = C.CardHigh, size: Dp = 40.dp, description: String? = null) {
+    FilledTonalIconButton(
+        onClick, modifier.size(size),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = background, contentColor = tint),
+    ) { Icon(icon, description, Modifier.size(size * 0.5f)) }
 }
 
 // ---------- Controles ----------
 
 @Composable
 fun SwitchSubaru(checked: Boolean, onChange: (Boolean) -> Unit, gold: Boolean = false) {
-    val track by animateColorAsState(if (checked) (if (gold) C.Gold else Color(0xFFB7C4FF)) else C.CardHighest, label = "track")
-    val thumb = if (checked) (if (gold) Color(0xFF3C2F00) else Color(0xFF1D3FB8)) else C.Muted
-    Box(
-        Modifier.width(52.dp).height(30.dp).clip(CircleShape).background(track).clickable { onChange(!checked) }.padding(3.dp),
-        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
-    ) { Box(Modifier.size(if (checked) 24.dp else 18.dp).clip(CircleShape).background(thumb)) }
+    Switch(
+        checked, onChange,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = if (gold) C.OnGold else Color(0xFF1D3FB8), checkedTrackColor = if (gold) C.Gold else C.BluePale,
+            uncheckedThumbColor = C.Dim, uncheckedTrackColor = C.CardHighest, uncheckedBorderColor = C.Outline,
+        ),
+    )
 }
 
 @Composable
-fun CheckSubaru(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, size: Dp = 24.dp) {
-    Box(
-        modifier.size(size).clip(RoundedCornerShape(5.dp))
-            .background(if (checked) C.Blue else C.Field)
-            .border(1.5.dp, if (checked) C.BluePale.copy(alpha = 0.6f) else C.BorderStrong, RoundedCornerShape(5.dp))
-            .clickable { onChange(!checked) },
-        contentAlignment = Alignment.Center,
-    ) { if (checked) Icon(Icons.Filled.Check, null, Modifier.size(size * 0.72f), tint = Color.White) }
+fun CheckSubaru(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") size: Dp = 24.dp) {
+    Checkbox(
+        checked, onChange, modifier,
+        colors = CheckboxDefaults.colors(checkedColor = C.BlueLight, checkmarkColor = Color.White, uncheckedColor = C.Dim),
+    )
 }
 
 data class Seg<T>(val value: T, val label: String, val icon: ImageVector? = null)
 
 @Composable
 fun <T> Segmented(options: List<Seg<T>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.Field).border(1.dp, C.Border, RoundedCornerShape(10.dp)).padding(4.dp)) {
-        options.forEach { o ->
-            val on = o.value == selected
-            Row(
-                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(7.dp)).background(if (on) C.Blue else Color.Transparent).clickable { onSelect(o.value) },
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (o.icon != null) {
-                    Icon(o.icon, null, Modifier.size(19.dp), tint = if (on) Color.White else C.Muted)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(o.label, style = T.labelLg, color = if (on) Color.White else C.Muted, maxLines = 1)
-            }
+    SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
+        options.forEachIndexed { i, o ->
+            SegmentedButton(
+                selected = o.value == selected, onClick = { onSelect(o.value) },
+                shape = SegmentedButtonDefaults.itemShape(i, options.size),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = C.Blue, activeContentColor = Color.White, activeBorderColor = C.Blue,
+                    inactiveContainerColor = Color.Transparent, inactiveContentColor = C.Muted, inactiveBorderColor = C.Outline,
+                ),
+                icon = { if (o.icon != null) Icon(o.icon, null, Modifier.size(18.dp)) else Icon(Icons.Filled.Check, null, Modifier.size(0.dp)) },
+                modifier = Modifier.heightIn(min = 44.dp),
+            ) { Text(o.label, style = T.labelLg, maxLines = 1) }
         }
     }
 }
 
 data class Opt<T>(val value: T, val label: String, val sub: String? = null)
 
-/** Caixa que mostra o valor escolhido e abre uma lista (o "campo de seleção" do design). */
+@Composable
+fun textFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = C.BluePale, unfocusedBorderColor = C.Outline, disabledBorderColor = C.Border,
+    focusedContainerColor = C.SurfaceLowest, unfocusedContainerColor = C.SurfaceLowest, disabledContainerColor = C.SurfaceLowest,
+    focusedTextColor = C.Text, unfocusedTextColor = C.Text, disabledTextColor = C.Dim, cursorColor = C.Gold,
+    focusedLabelColor = C.BluePale, unfocusedLabelColor = C.Muted, focusedLeadingIconColor = C.BluePale, unfocusedLeadingIconColor = C.Muted,
+    focusedTrailingIconColor = C.BluePale, unfocusedTrailingIconColor = C.Muted, disabledTrailingIconColor = C.Dim, disabledLeadingIconColor = C.Dim,
+    focusedPlaceholderColor = C.Dim, unfocusedPlaceholderColor = C.Dim,
+    focusedSupportingTextColor = C.Muted, unfocusedSupportingTextColor = C.Muted,
+)
+
+/** Campo de seleção do Material 3 (menu suspenso). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> DropField(
     value: T,
@@ -246,33 +271,31 @@ fun <T> DropField(
 ) {
     var open by remember { mutableStateOf(false) }
     val current = options.firstOrNull { it.value == value }
-    Box(modifier) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(8.dp)).background(C.Field).border(1.dp, C.Border, RoundedCornerShape(8.dp))
-                .clickable(enabled = enabled) { open = true }.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (leading != null) {
-                Icon(leading, null, Modifier.size(20.dp), tint = C.Muted)
-                Spacer(Modifier.width(10.dp))
-            }
-            Text(
-                (prefix ?: "") + (current?.label ?: placeholder),
-                Modifier.weight(1f), style = T.labelLg.copy(fontWeight = FontWeight.Medium),
-                color = if (enabled) C.Text else C.Dim, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            Icon(Icons.Filled.ExpandMore, null, Modifier.size(22.dp), tint = C.Muted)
-        }
-        DropdownMenu(open, { open = false }, containerColor = C.CardHigh, modifier = Modifier.heightIn(max = maxMenuHeight)) {
+    ExposedDropdownMenuBox(expanded = open && enabled, onExpandedChange = { if (enabled) open = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = (prefix ?: "") + (current?.label ?: placeholder),
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            maxLines = 2,
+            textStyle = T.bodyMd.copy(fontWeight = FontWeight.Medium),
+            leadingIcon = leading?.let { { Icon(it, null, Modifier.size(20.dp)) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open && enabled) },
+            colors = textFieldColors(),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled),
+        )
+        ExposedDropdownMenu(expanded = open && enabled, onDismissRequest = { open = false }, containerColor = C.CardHigh, modifier = Modifier.heightIn(max = maxMenuHeight)) {
             options.forEach { o ->
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text(o.label, style = T.labelLg.copy(fontWeight = FontWeight.Medium), color = if (o.value == value) C.Gold else C.Text)
+                            Text(o.label, style = T.bodyMd.copy(fontWeight = FontWeight.Medium), color = if (o.value == value) C.BluePale else C.Text)
                             if (o.sub != null) Text(o.sub, style = T.labelSm, color = C.Muted)
                         }
                     },
                     onClick = { open = false; onSelect(o.value) },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
         }
@@ -281,39 +304,52 @@ fun <T> DropField(
 
 @Composable
 fun ChipSmall(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        modifier.clip(RoundedCornerShape(6.dp)).background(if (selected) Color(0x33FACC15) else Color(0x14FFFFFF))
-            .border(1.dp, if (selected) Color(0x66FACC15) else C.Border, RoundedCornerShape(6.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp),
-        style = T.labelMd.copy(fontWeight = FontWeight.SemiBold), color = if (selected) C.Gold else C.Muted,
+    FilterChip(
+        selected, onClick, label = { Text(text, style = T.labelLg) }, modifier = modifier, shape = RoundedCornerShape(10.dp),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = Color.Transparent, labelColor = C.Muted,
+            selectedContainerColor = Color(0x33FACC15), selectedLabelColor = C.Gold,
+        ),
+        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = C.Outline, selectedBorderColor = Color(0x80FACC15)),
     )
 }
 
 @Composable
 fun SiteChip(text: String, icon: ImageVector, tint: Color = C.Muted) {
-    Row(
-        Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0x0DFFFFFF)).border(1.dp, C.Border, RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, Modifier.size(17.dp), tint = tint)
-        Spacer(Modifier.width(7.dp))
-        Text(text, style = T.labelMd, color = C.Text, maxLines = 1)
-    }
+    AssistChip(
+        onClick = {}, label = { Text(text, style = T.labelLg) },
+        leadingIcon = { Icon(icon, null, Modifier.size(AssistChipDefaults.IconSize), tint = tint) },
+        shape = Stadium,
+        colors = AssistChipDefaults.assistChipColors(containerColor = Color.Transparent, labelColor = C.Text),
+        border = AssistChipDefaults.assistChipBorder(enabled = true, borderColor = C.Outline),
+    )
 }
 
+/** Abas do Material 3 (com contador opcional). */
 @Composable
-fun RowScope.TabPill(text: String, count: Int?, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(8.dp)).background(if (selected) C.Blue else Color.Transparent).clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+fun Tabs(items: List<Pair<String, Int?>>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    SecondaryTabRow(
+        selectedTabIndex = selected, modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)),
+        containerColor = C.Card, contentColor = C.Gold,
+        divider = { HorizontalDivider(color = C.Border) },
     ) {
-        Text(text, style = T.labelLg.copy(fontSize = 13.sp), color = if (selected) Color.White else C.Muted, maxLines = 1)
-        if (count != null) {
-            Spacer(Modifier.width(6.dp))
-            Text(
-                count.toString(),
-                Modifier.clip(RoundedCornerShape(10.dp)).background(if (selected) Color(0x33FFFFFF) else Color(0x1AFFFFFF)).padding(horizontal = 7.dp, vertical = 1.dp),
-                style = T.labelSm, color = if (selected) Color.White else C.Muted,
+        items.forEachIndexed { i, (title, count) ->
+            Tab(
+                selected = i == selected, onClick = { onSelect(i) },
+                selectedContentColor = C.Gold, unselectedContentColor = C.Muted,
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(title, style = T.labelLg, maxLines = 1)
+                        if (count != null) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                count.toString(),
+                                Modifier.clip(CircleShape).background(if (i == selected) Color(0x33FACC15) else Color(0x1AFFFFFF)).padding(horizontal = 8.dp, vertical = 1.dp),
+                                style = T.labelSm.copy(fontWeight = FontWeight.Bold), color = if (i == selected) C.Gold else C.Muted,
+                            )
+                        }
+                    }
+                },
             )
         }
     }
@@ -321,17 +357,17 @@ fun RowScope.TabPill(text: String, count: Int?, selected: Boolean, onClick: () -
 
 // ---------- Progresso e gráficos ----------
 
-/** Barra azul com o marcador dourado, como no design. */
+/** Barra de progresso do Material 3. */
 @Composable
 fun ProgressTrack(progress: Float, modifier: Modifier = Modifier, indeterminate: Boolean = false) {
-    val p = progress.coerceIn(0f, 1f)
-    Canvas(modifier.fillMaxWidth().height(8.dp)) {
-        val r = size.height / 2
-        drawRoundRect(Color(0x1FFFFFFF), cornerRadius = CornerRadius(r, r))
-        if (indeterminate || p <= 0f) return@Canvas
-        val w = size.width * p
-        drawRoundRect(Brush.horizontalGradient(listOf(C.Blue, C.BlueLight)), size = Size(w, size.height), cornerRadius = CornerRadius(r, r))
-        if (w > 12.dp.toPx()) drawRoundRect(C.Gold, topLeft = Offset(w - 7.dp.toPx(), -1.dp.toPx()), size = Size(7.dp.toPx(), size.height + 2.dp.toPx()), cornerRadius = CornerRadius(2.dp.toPx()))
+    val shape = RoundedCornerShape(50)
+    if (indeterminate || progress <= 0f) {
+        LinearProgressIndicator(modifier = modifier.fillMaxWidth().height(8.dp).clip(shape), color = C.BlueLight, trackColor = C.CardHighest)
+    } else {
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) }, modifier = modifier.fillMaxWidth().height(8.dp).clip(shape),
+            color = C.BlueLight, trackColor = C.CardHighest, gapSize = 0.dp, drawStopIndicator = {},
+        )
     }
 }
 
@@ -342,6 +378,10 @@ fun Sparkline(values: List<Float>, modifier: Modifier = Modifier, color: Color =
         val max = (data.maxOrNull() ?: 1f).coerceAtLeast(1f)
         val stepX = size.width / (data.size - 1)
         val pts = data.mapIndexed { i, v -> Offset(i * stepX, size.height - (v / max) * (size.height - 8.dp.toPx()) - 4.dp.toPx()) }
+        for (k in 1..3) {
+            val y = size.height * k / 4
+            drawLine(Color(0x14FFFFFF), Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
+        }
         val line = Path().apply {
             moveTo(pts.first().x, pts.first().y)
             for (i in 1 until pts.size) {
@@ -366,7 +406,7 @@ fun Sparkline(values: List<Float>, modifier: Modifier = Modifier, color: Color =
 // ---------- Imagens ----------
 
 @Composable
-fun Thumb(url: String?, modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(6.dp), icon: ImageVector = Icons.Outlined.Image) {
+fun Thumb(url: String?, modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(10.dp), icon: ImageVector = Icons.Outlined.Image) {
     Box(modifier.clip(shape).background(C.CardHighest), contentAlignment = Alignment.Center) {
         if (url == null) Icon(icon, null, Modifier.size(24.dp), tint = C.Dim)
         else AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -380,13 +420,25 @@ fun HRow(modifier: Modifier = Modifier, gap: Dp = 8.dp, content: @Composable Row
     Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically, content = content)
 
 @Composable
-fun Divider(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().height(1.dp).background(C.Border))
+fun Divider(modifier: Modifier = Modifier) = HorizontalDivider(modifier, color = C.Border)
 
 @Composable
 fun Empty(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null) {
-    Column(modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (icon != null) Icon(icon, null, Modifier.size(34.dp), tint = C.Dim)
-        Spacer(Modifier.height(8.dp))
-        Text(text, style = T.bodySm, color = C.Muted)
+    Column(modifier.fillMaxWidth().padding(vertical = 30.dp, horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (icon != null) {
+            Box(Modifier.size(72.dp).clip(CircleShape).background(C.Container), contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(32.dp), tint = C.BluePale)
+            }
+            Spacer(Modifier.height(14.dp))
+        }
+        Text(text, style = T.bodyMd, color = C.Muted, textAlign = TextAlign.Center)
+    }
+}
+
+/** Círculo tonal com ícone, usado nos títulos de seção. */
+@Composable
+fun IconTile(icon: ImageVector, modifier: Modifier = Modifier, tint: Color = C.BluePale, size: Dp = 40.dp) {
+    Box(modifier.size(size).clip(CircleShape).background(Color(0x1F1D4ED8)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(size * 0.55f), tint = tint)
     }
 }

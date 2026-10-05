@@ -60,7 +60,10 @@ import com.subarudl.app.ui.components.BtnGold
 import com.subarudl.app.ui.components.BtnPrimary
 import com.subarudl.app.ui.components.CheckSubaru
 import com.subarudl.app.ui.components.DropField
+import com.subarudl.app.ui.components.IconTile
+import com.subarudl.app.ui.components.LinkField
 import com.subarudl.app.ui.components.Mono
+import com.subarudl.app.ui.components.ScreenTitle
 import com.subarudl.app.ui.components.Opt
 import com.subarudl.app.ui.components.SCard
 import com.subarudl.app.ui.components.SectionLabel
@@ -102,48 +105,21 @@ fun PlaylistsScreen(vm: MainViewModel) {
     val estimate = if (o.mode == Mode.AUDIO && o.audioBitrate > 0) totalDuration * o.audioBitrate * 1000L / 8 else null
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(5.dp).height(30.dp).clip(RoundedCornerShape(3.dp)).background(C.Gold))
-                Spacer(Modifier.width(8.dp))
-                Text("Download em Lote", style = T.headlineLg)
-            }
-            Text("Baixe álbuns, cursos e playlists completas com um toque", style = T.bodySm.copy(fontSize = 14.sp), color = C.Muted, modifier = Modifier.padding(top = 4.dp))
-        }
+        item { ScreenTitle("Download em lote", "Baixe álbuns, cursos e playlists completas com um toque.") }
 
         item {
-            SCard(padding = 14.dp) {
+            SCard(padding = 16.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.PlaylistAdd, null, Modifier.size(20.dp), tint = C.BluePale)
-                    Spacer(Modifier.width(8.dp))
-                    SectionLabel("Detector de telemetria de lote", color = C.Text)
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.Field).border(1.dp, C.Border, RoundedCornerShape(8.dp)).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.Link, null, Modifier.size(22.dp), tint = C.Muted)
-                    Spacer(Modifier.width(10.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (vm.batchText.isEmpty()) Text("Cole uma playlist ou vários links (um por linha)", style = T.bodySm.copy(fontSize = 14.sp), color = C.Dim)
-                        BasicTextField(
-                            vm.batchText, { vm.batchText = it },
-                            textStyle = T.bodyMd.copy(color = C.Text, fontFamily = Manrope), cursorBrush = SolidColor(C.Gold), maxLines = 5,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        )
+                    IconTile(Icons.Outlined.PlaylistAdd, size = 36.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Links do lote", style = T.title)
+                        Text("Uma playlist ou vários links, um por linha", style = T.labelMd)
                     }
-                    if (vm.batchText.isNotEmpty() || sources.isNotEmpty()) {
-                        Row(
-                            Modifier.height(36.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x14FFFFFF)).clickable { vm.clearBatch() }.padding(horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Filled.Close, null, Modifier.size(16.dp), tint = C.Text)
-                            Spacer(Modifier.width(5.dp))
-                            Text("Limpar", style = T.labelMd, color = C.Text)
-                        }
-                    }
+                    if (sources.isNotEmpty()) BtnGhost("Limpar", { vm.clearBatch() }, icon = Icons.Filled.Close, height = 40.dp)
                 }
+                Spacer(Modifier.height(14.dp))
+                LinkField(vm.batchText, { vm.batchText = it }, "Cole os links aqui", maxLines = 5)
                 Spacer(Modifier.height(12.dp))
                 if (vm.batchLoading) {
                     Row(Modifier.fillMaxWidth().height(52.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -152,7 +128,7 @@ fun PlaylistsScreen(vm: MainViewModel) {
                         Text("Analisando o lote…", style = T.labelLg, color = C.Muted)
                     }
                 } else {
-                    BtnPrimary("Analisar Lote", { vm.analyzeBatch(vm.batchText) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Search, enabled = vm.batchText.isNotBlank())
+                    BtnPrimary("Analisar lote", { vm.analyzeBatch(vm.batchText) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Search, enabled = vm.batchText.isNotBlank())
                 }
             }
         }
