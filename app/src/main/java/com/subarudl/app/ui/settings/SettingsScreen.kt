@@ -551,13 +551,14 @@ private fun ToolRow(name: String, version: String, sub: String, last: Boolean = 
 private fun AccountsPage(vm: MainViewModel, onBack: () -> Unit) {
     val s by vm.settings.collectAsState()
     val ctx = LocalContext.current
-    var status by remember { mutableStateOf(Cookies.status(ctx)) }
+    val revision by Cookies.revision.collectAsState()
+    val status = remember(revision) { Cookies.status(ctx) }
     var login by remember { mutableStateOf(false) }
+    var receive by remember { mutableStateOf(false) }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            val n = Cookies.importFile(ctx, uri)
-            vm.toast(if (n > 0) "$n cookies importados" else "Esse arquivo não parece um cookies.txt")
-            status = Cookies.status(ctx)
+            val r = Cookies.importFile(ctx, uri)
+            vm.toast(if (r.cookies > 0) "${r.cookies} cookies de ${r.sites} sites importados" else "Esse arquivo não parece um cookies.txt")
         }
     }
     PageFrame("Contas e cookies", onBack) {
@@ -575,12 +576,21 @@ private fun AccountsPage(vm: MainViewModel, onBack: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             BtnPrimary("Entrar em um site", { login = true }, Modifier.fillMaxWidth(), icon = Icons.Outlined.AccountCircle)
             Spacer(Modifier.height(10.dp))
-            BtnGhost("Importar cookies.txt", { importer.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) }, Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
-            BtnGhost("Desconectar tudo", { Cookies.clear(ctx); status = Cookies.status(ctx); vm.toast("Cookies apagados") }, Modifier.fillMaxWidth(), color = C.Error, enabled = status.exists)
+            BtnGhost("Receber do PC pelo Wi-Fi", { receive = true }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Wifi)
+            Text("Já usa o Subaru DL no computador? Ele gera o cookies.txt a partir do navegador e envia para cá em um toque.", style = T.bodySm, color = C.Dim, modifier = Modifier.padding(top = 6.dp))
+            Spacer(Modifier.height(10.dp))
+            BtnGhost("Importar cookies.txt", { importer.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) }, Modifier.fillMaxWidth())
+            Text("Também funciona abrir o arquivo (ou compartilhá-lo) com o Subaru DL, vindo do WhatsApp, Telegram, Drive ou do USB.", style = T.bodySm, color = C.Dim, modifier = Modifier.padding(top = 6.dp))
+            Spacer(Modifier.height(10.dp))
+            BtnGhost("Desconectar tudo", { Cookies.clear(ctx); vm.toast("Cookies apagados") }, Modifier.fillMaxWidth(), color = C.Error, enabled = status.exists)
         }
     }
-    if (login) LoginDialog(onDone = { n -> login = false; status = Cookies.status(ctx); if (n > 0) vm.toast("Conta conectada ($n cookies)") else vm.toast("Nenhum cookie foi guardado") })
+    if (login) LoginDialog(onDone = { n -> login = false; if (n > 0) vm.toast("Conta conectada ($n cookies)") else vm.toast("Nenhum cookie foi guardado") })
+    if (receive) ReceiveCookiesSheet(
+        onDone = { r -> receive = false; vm.toast("${r.cookies} cookies de ${r.sites} sites recebidos do PC") },
+        onDismiss = { receive = false },
+    )
 }
 
 // ---------- Logs ----------

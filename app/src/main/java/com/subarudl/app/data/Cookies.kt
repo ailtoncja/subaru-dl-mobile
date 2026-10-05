@@ -4,13 +4,23 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.CookieManager
 import com.subarudl.app.engine.Args
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.net.URI
 
 /**
  * Cookies do yt-dlp e do gallery-dl num arquivo só (cookies.txt, formato Netscape).
- * Eles chegam por duas vias: o login numa janela dentro do app, ou um cookies.txt importado.
+ * Eles chegam por três vias: o login numa janela dentro do app, um cookies.txt importado (ou aberto direto
+ * pelo "Abrir com"/"Compartilhar") e o envio do computador pelo Wi-Fi ([CookieReceiver]).
  */
 object Cookies {
+    /** Sobe a cada mudança nos cookies, para as telas atualizarem o resumo. */
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision
+    private fun changed() { _revision.value++ }
+
+    data class Imported(val cookies: Int, val sites: Int)
+
     /** Sites que usam a mesma conta: ao entrar num, pegamos os cookies dos outros. */
     private val related = mapOf(
         "youtube.com" to listOf("youtube.com", "google.com", "accounts.google.com", "googlevideo.com"),
@@ -38,6 +48,7 @@ object Cookies {
         Args.cookiesFile(ctx).delete()
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
+        changed()
     }
 
     private fun registrable(host: String): String {
@@ -75,17 +86,33 @@ object Cookies {
         } else emptyList()
         val header = if (keep.any { it.startsWith("# Netscape") }) emptyList() else listOf("# Netscape HTTP Cookie File", "# Gerado pelo Subaru DL", "")
         file.writeText((header + keep + newLines).joinToString("\n") + "\n")
+        changed()
         return newLines.size
     }
 
-    /** Importa um cookies.txt (exportado por uma extensão do navegador). Devolve quantos cookies entraram. */
-    fun importFile(ctx: Context, uri: Uri): Int {
-        val text = ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return 0
-        val lines = text.lines()
-        val valid = lines.count { it.isNotBlank() && !it.startsWith("# ") && it.removePrefix("#HttpOnly_").split("\t").size >= 7 }
-        if (valid == 0) return 0
-        val out = if (lines.any { it.startsWith("# Netscape") }) text else "# Netscape HTTP Cookie File\n$text"
-        Args.cookiesFile(ctx).writeText(out)
-        return valid
+    private fun isCookie(line: String) = line.isNotBlank() && !line.startsWith("# ") && line.removePrefix("#HttpOnly_").split("\t").size >= 7
+
+    private fun domainOf(line: String) = line.removePrefix("#HttpOnly_").split("\t").firstOrNull().orEmpty().removePrefix(".").lowercase()
+
+    /**
+     * Junta um cookies.txt (formato Netscape) aos que já existem: os sites que vieram no texto substituem os
+     * antigos e os outros ficam como estavam. Devolve quantos cookies e de quantos sites entraram.
+     */
+    fun importText(ctx: Context, text: String): Imported {
+        val incoming = text.lines().map { it.trimEnd('\r') }.filter(::isCookie)
+        if (incoming.isEmpty()) return Imported(0, 0)
+        val domains = incoming.map(::domainOf).toSet()
+        val file = Args.cookiesFile(ctx)
+        val keep = if (file.exists()) file.readLines().filter { isCookie(it) && domainOf(it) !in domains } else emptyList()
+        val header = listOf("# Netscape HTTP Cookie File", "# Gerado pelo Subaru DL", "")
+        file.writeText((header + keep + incoming).joinToString("\n") + "\n")
+        changed()
+        return Imported(incoming.size, domains.size)
+    }
+
+    /** Importa um cookies.txt (exportado por uma extensão do navegador ou gerado no PC). */
+    fun importFile(ctx: Context, uri: Uri): Imported {
+        val text = runCatching { ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } }.getOrNull() ?: return Imported(0, 0)
+        return importText(ctx, text)
     }
 }

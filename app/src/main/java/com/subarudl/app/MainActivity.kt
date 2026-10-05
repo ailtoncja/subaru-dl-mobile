@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import com.subarudl.app.data.Cookies
 import com.subarudl.app.data.SettingsStore
 import com.subarudl.app.service.Notifier
 import com.subarudl.app.ui.AppRoot
@@ -51,9 +53,22 @@ class MainActivity : ComponentActivity() {
             }
         }
         when (intent.action) {
-            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { vm.handleIncoming(it) }
-            Intent.ACTION_VIEW -> intent.dataString?.let { vm.handleIncoming(it) }
+            Intent.ACTION_SEND -> {
+                val file = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                if (file != null) importCookies(file) else intent.getStringExtra(Intent.EXTRA_TEXT)?.let { vm.handleIncoming(it) }
+            }
+            Intent.ACTION_VIEW -> {
+                val data = intent.data
+                if (data != null && (data.scheme == "content" || data.scheme == "file")) importCookies(data)
+                else intent.dataString?.let { vm.handleIncoming(it) }
+            }
         }
+    }
+
+    /** Um arquivo aberto ou compartilhado com o app: só serve se for um cookies.txt. */
+    private fun importCookies(uri: Uri) {
+        val r = Cookies.importFile(this, uri)
+        vm.toast(if (r.cookies > 0) "${r.cookies} cookies de ${r.sites} sites importados" else "Esse arquivo não parece um cookies.txt")
     }
 
     /** Link copiado: só dá para ler a área de transferência com o app em primeiro plano. */
