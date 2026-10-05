@@ -69,6 +69,12 @@ aberta. O código está em `data/CookieReceiver.kt` (celular) e `src/main/celula
 
 Teste no emulador: `adb forward tcp:38475 tcp:38475`; o PC acha o emulador em 127.0.0.1.
 
+## Som do Boxer
+
+Ajustes → Efeito Sonoro Boxer WRC: ao terminar um download com sucesso, a notificação toca o ronco do motor
+(`res/raw/boxer_wrc.mp3`, um áudio de 4,5 s fornecido pelo autor). Tocar na linha dos Ajustes toca o som para ouvir.
+Falhas avisam em silêncio. O som segue o volume de notificações e o modo "Não perturbe" do aparelho.
+
 ## Turbo (aria2c)
 
 O aria2c do Android não acha os certificados do sistema e recusava todo site https ("aria2c exited with code 1").

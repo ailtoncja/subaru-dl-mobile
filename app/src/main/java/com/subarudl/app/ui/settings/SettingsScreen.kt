@@ -86,6 +86,7 @@ import com.subarudl.app.data.Mode
 import com.subarudl.app.data.Status
 import com.subarudl.app.data.Storage
 import com.subarudl.app.engine.Engine
+import com.subarudl.app.service.Notifier
 import com.subarudl.app.ui.components.Badge
 import com.subarudl.app.ui.components.BtnGhost
 import com.subarudl.app.ui.components.BtnPrimary
@@ -310,8 +311,8 @@ private fun MainSettings(vm: MainViewModel, onPage: (String?) -> Unit) {
                 RowItem(Icons.Outlined.Notifications, "Notificação de Conclusão", "Aviso com o resultado de cada download") {
                     SwitchSubaru(s.notifyDone, { v -> vm.update { it.copy(notifyDone = v) } })
                 }
-                RowItem(Icons.Outlined.VolumeUp, "Efeito Sonoro Boxer WRC", "Som ao finalizar um download", divider = false) {
-                    SwitchSubaru(s.soundDone, { v -> vm.update { it.copy(soundDone = v) } }, gold = true)
+                RowItem(Icons.Outlined.VolumeUp, "Efeito Sonoro Boxer WRC", "Ronco ao concluir um download (toque para ouvir)", divider = false, onClick = { Notifier.previewBoxer(ctx) }) {
+                    SwitchSubaru(s.soundDone, { v -> vm.update { it.copy(soundDone = v) }; if (v) Notifier.previewBoxer(ctx) }, gold = true)
                 }
             }
         }
