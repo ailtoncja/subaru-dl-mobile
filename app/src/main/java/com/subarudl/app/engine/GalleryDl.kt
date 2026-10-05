@@ -103,7 +103,7 @@ object GalleryDl {
         "{username|user[account]|user[name]|author[handle]|author[name]|owner[username]|blog_name|blog[name]|subreddit|uploader|search_tags|category}"
 
     fun downloadArgs(ctx: Context, url: String, o: GalleryOptions, s: AppSettings, workDir: File): List<String> {
-        val a = mutableListOf("--no-colors", "-d", workDir.absolutePath) + access(ctx, s)
+        val a = (listOf("--no-colors", "-d", workDir.absolutePath) + access(ctx, s)).toMutableList()
         organizeDirs(o)?.let { a += listOf("-o", "directory=" + JSONArray(it).toString()) }
         if (s.gallerySkipDone) a += listOf("--download-archive", File(ctx.noBackupFilesDir, "gallerydl/baixados.sqlite3").absolutePath)
         if (o.range.isNotBlank()) a += listOf("--range", o.range)
