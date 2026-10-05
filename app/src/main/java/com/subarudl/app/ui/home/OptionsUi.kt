@@ -50,6 +50,9 @@ import com.subarudl.app.ui.theme.C
 import com.subarudl.app.ui.theme.T
 import com.subarudl.app.util.applySubtitle
 import com.subarudl.app.util.audioTrackOptions
+import com.subarudl.app.util.commonSubLangs
+import com.subarudl.app.util.languageName
+import com.subarudl.app.util.subLangsFor
 import com.subarudl.app.util.formatBytes
 import com.subarudl.app.util.formatDuration
 import com.subarudl.app.util.subtitleChoices
@@ -139,13 +142,7 @@ fun AudioTrackSelect(info: MediaInfo, o: DownloadOptions, onChange: (DownloadOpt
 fun SubtitleSelect(info: MediaInfo, o: DownloadOptions, onChange: (DownloadOptions) -> Unit, modifier: Modifier = Modifier) {
     val s = o.subs
     if (info.isPlaylist) {
-        Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            CheckSubaru(s.enabled, { on -> onChange(o.copy(subs = s.copy(enabled = on, auto = if (on) true else s.auto))) })
-            Spacer(Modifier.width(12.dp))
-            Text("Legendas ${(s.langs.firstOrNull() ?: "pt").uppercase()} (ou automática)", style = T.bodyMd)
-            Spacer(Modifier.weight(1f))
-            Mono(".${s.format.uppercase()}", color = C.Dim)
-        }
+        GenericSubtitleSelect(o, onChange, modifier)
         return
     }
     val (manual, auto) = subtitleChoices(info)
@@ -167,6 +164,37 @@ fun SubtitleSelect(info: MediaInfo, o: DownloadOptions, onChange: (DownloadOptio
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         DropField(value, options, { onChange(o.copy(subs = applySubtitle(s, it))) }, Modifier.fillMaxWidth(), leading = Icons.Outlined.ClosedCaption, prefix = "Legenda: ")
         if (value.isNotEmpty()) {
+            DropField(
+                if (s.embed) "embed" else "file",
+                listOf(Opt("embed", "Embutida no vídeo"), Opt("file", "Arquivo separado (.${s.format})")),
+                { onChange(o.copy(subs = s.copy(embed = it == "embed"))) },
+                Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/**
+ * Legenda para playlists e lotes: como o app não sabe as legendas de cada vídeo, escolhe-se o IDIOMA
+ * e o yt-dlp procura em cada um (a feita pelo autor e, se faltar, a automática).
+ */
+@Composable
+fun GenericSubtitleSelect(o: DownloadOptions, onChange: (DownloadOptions) -> Unit, modifier: Modifier = Modifier) {
+    val s = o.subs
+    val current = if (!s.enabled) "" else s.langs.firstOrNull { it in commonSubLangs } ?: s.langs.firstOrNull() ?: ""
+    val options = buildList {
+        add(Opt("", "nenhuma"))
+        commonSubLangs.forEach { add(Opt(it, languageName(it))) }
+        if (current.isNotEmpty() && current !in commonSubLangs) add(Opt(current, languageName(current)))
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        DropField(
+            current, options,
+            { code -> onChange(o.copy(subs = if (code.isEmpty()) s.copy(enabled = false) else s.copy(enabled = true, all = false, langs = subLangsFor(code), auto = if (s.enabled) s.auto else true))) },
+            Modifier.fillMaxWidth(), leading = Icons.Outlined.ClosedCaption, prefix = "Legenda: ",
+        )
+        if (s.enabled) {
+            SwitchRow("Usar a automática se o vídeo não tiver", "A legenda gerada pelo site, quando não existe uma feita pelo autor", s.auto) { onChange(o.copy(subs = s.copy(auto = it))) }
             DropField(
                 if (s.embed) "embed" else "file",
                 listOf(Opt("embed", "Embutida no vídeo"), Opt("file", "Arquivo separado (.${s.format})")),

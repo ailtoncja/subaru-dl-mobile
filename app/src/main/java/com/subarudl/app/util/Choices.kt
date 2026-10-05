@@ -28,10 +28,17 @@ fun estimateSize(info: MediaInfo, h: Int?, fps30: Boolean): Long? {
     return vs + a
 }
 
+/** Para playlists e lotes (o app ainda não sabe os formatos de cada vídeo): se não existir, usa a mais próxima abaixo. */
+val genericQualities = listOf(
+    Opt("best", "Melhor disponível"), Opt("2160", "2160p 4K UHD"), Opt("1440", "1440p 2K QHD"), Opt("1080", "1080p Full HD"),
+    Opt("720", "720p HD"), Opt("480", "480p SD"), Opt("360", "360p"), Opt("240", "240p"),
+)
+
 /** Qualidades que existem de verdade, cada uma com a estimativa de tamanho. */
-fun videoQualityOptions(info: MediaInfo, fps30: Boolean): List<Opt<String>> {
+fun videoQualityOptions(info: MediaInfo?, fps30: Boolean): List<Opt<String>> {
+    if (info == null || info.isPlaylist) return genericQualities
     val heights = info.formats.filter { it.hasVideo && it.height != null && it.height >= 144 }.map { it.height!! }.distinct().sortedDescending()
-    if (heights.isEmpty()) return listOf(Opt("best", "Melhor disponível"))
+    if (heights.isEmpty()) return genericQualities
     fun describe(h: Int?): String {
         val f = pickVideo(info, h, fps30) ?: return ""
         val fps = f.fps?.takeIf { it > 30 }?.let { "${it.toInt()}fps" }
@@ -71,6 +78,12 @@ fun audioTrackOptions(langs: List<String>, original: String?): List<Opt<String>>
 }
 
 // ---------- Legendas ----------
+
+/** Idiomas para escolher quando o app ainda não sabe quais legendas cada vídeo tem (playlists e lotes). */
+val commonSubLangs = listOf("pt-BR", "pt", "en", "es", "fr", "de", "it", "ja", "ko", "ru", "zh-Hans", "ar", "hi", "tr", "pl", "nl")
+
+/** Código escolhido → lista que o yt-dlp entende (português cobre pt e pt-BR). */
+fun subLangsFor(code: String): List<String> = if (code.startsWith("pt")) listOf("pt", "pt-BR") else listOf(code)
 
 data class SubChoice(val value: String, val label: String)
 

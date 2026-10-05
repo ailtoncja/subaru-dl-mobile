@@ -28,6 +28,8 @@ import androidx.compose.material.icons.outlined.Album
 import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Link
@@ -67,36 +69,26 @@ import com.subarudl.app.ui.components.ScreenTitle
 import com.subarudl.app.ui.components.Opt
 import com.subarudl.app.ui.components.SCard
 import com.subarudl.app.ui.components.SectionLabel
+import com.subarudl.app.ui.components.Seg
+import com.subarudl.app.ui.components.Segmented
 import com.subarudl.app.ui.components.SwitchSubaru
 import com.subarudl.app.ui.components.Thumb
 import com.subarudl.app.ui.home.DestinationRow
+import com.subarudl.app.ui.home.GenericSubtitleSelect
 import com.subarudl.app.ui.theme.C
 import com.subarudl.app.ui.theme.Manrope
 import com.subarudl.app.ui.theme.T
 import com.subarudl.app.util.formatBytes
+import com.subarudl.app.util.audioBitrateOptions
+import com.subarudl.app.util.audioFormats
 import com.subarudl.app.util.formatDuration
-
-private data class Preset(val id: String, val label: String, val mode: Mode, val format: String, val bitrate: Int, val quality: String = "best", val container: String = "mp4")
-
-private val presets = listOf(
-    Preset("mp3-320", "MP3 320k", Mode.AUDIO, "mp3", 320),
-    Preset("mp3-192", "MP3 192k", Mode.AUDIO, "mp3", 192),
-    Preset("m4a", "M4A 256k", Mode.AUDIO, "m4a", 256),
-    Preset("opus", "OPUS", Mode.AUDIO, "opus", 160),
-    Preset("flac", "FLAC (sem perda)", Mode.AUDIO, "flac", 0),
-    Preset("v-best", "Vídeo MP4 • melhor", Mode.VIDEO, "mp3", 320, "best"),
-    Preset("v-1080", "Vídeo MP4 • 1080p", Mode.VIDEO, "mp3", 320, "1080"),
-    Preset("v-720", "Vídeo MP4 • 720p", Mode.VIDEO, "mp3", 320, "720"),
-    Preset("v-480", "Vídeo MP4 • 480p", Mode.VIDEO, "mp3", 320, "480"),
-)
+import com.subarudl.app.util.videoContainers
+import com.subarudl.app.util.videoQualityOptions
 
 @Composable
 fun PlaylistsScreen(vm: MainViewModel) {
     val sources = vm.batchSources
     val o = vm.batchOptions
-    val presetId = presets.firstOrNull {
-        it.mode == o.mode && (if (o.mode == Mode.AUDIO) it.format == o.audioFormat && (it.bitrate == o.audioBitrate || o.audioFormat == "flac") else it.quality == o.quality)
-    }?.id ?: presets.first().id
     val selectedCount = vm.batchSelectedCount()
     val totalDuration = sources.sumOf { s ->
         val info = s.info ?: return@sumOf 0L
@@ -165,28 +157,35 @@ fun PlaylistsScreen(vm: MainViewModel) {
                         }
                     }
                     Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        val allSelected = sources.all { s -> s.info == null || s.selected.size >= s.total }
-                        BtnGhost(
-                            if (allSelected) "Desmarcar" else "Marcar tudo",
-                            {
-                                sources.forEachIndexed { i, s ->
-                                    val info = s.info ?: return@forEachIndexed
-                                    vm.updateSource(i) { it.copy(selected = if (allSelected) emptySet() else if (info.isPlaylist) info.entries.map { e -> e.index }.toSet() else setOf(1)) }
-                                }
-                            },
-                            Modifier.weight(1f), icon = Icons.Outlined.PlaylistAddCheck,
-                        )
-                        DropField(
-                            presetId, presets.map { Opt(it.id, it.label) },
-                            { id ->
-                                val p = presets.first { it.id == id }
-                                vm.batchOptions = if (p.mode == Mode.AUDIO) o.copy(mode = Mode.AUDIO, audioFormat = p.format, audioBitrate = p.bitrate)
-                                else o.copy(mode = Mode.VIDEO, quality = p.quality, container = p.container)
-                            },
-                            Modifier.weight(1f),
-                        )
+                    Segmented(
+                        listOf(Seg(Mode.AUDIO, "Áudio ${o.audioFormat.uppercase()}", Icons.Outlined.Headphones), Seg(Mode.VIDEO, "Vídeo ${o.container.uppercase()}", Icons.Outlined.Videocam)),
+                        o.mode, { vm.batchOptions = o.copy(mode = it) },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (o.mode == Mode.AUDIO) {
+                        val lossless = o.audioFormat == "wav" || o.audioFormat == "flac"
+                        DropField(if (lossless) 0 else o.audioBitrate, audioBitrateOptions(null, lossless), { vm.batchOptions = o.copy(audioBitrate = it) }, Modifier.fillMaxWidth(), enabled = !lossless)
+                        Spacer(Modifier.height(10.dp))
+                        DropField(o.audioFormat, audioFormats, { vm.batchOptions = o.copy(audioFormat = it) }, Modifier.fillMaxWidth(), prefix = "Formato: ")
+                    } else {
+                        DropField(o.quality, videoQualityOptions(null, o.fps30), { vm.batchOptions = o.copy(quality = it) }, Modifier.fillMaxWidth(), prefix = "Qualidade: ")
+                        Spacer(Modifier.height(10.dp))
+                        DropField(o.container, videoContainers, { vm.batchOptions = o.copy(container = it) }, Modifier.fillMaxWidth(), prefix = "Formato: ")
+                        Spacer(Modifier.height(10.dp))
+                        GenericSubtitleSelect(o, { vm.batchOptions = it })
                     }
+                    Spacer(Modifier.height(12.dp))
+                    val allSelected = sources.all { s -> s.info == null || s.selected.size >= s.total }
+                    BtnGhost(
+                        if (allSelected) "Desmarcar todos" else "Marcar todos",
+                        {
+                            sources.forEachIndexed { i, s ->
+                                val info = s.info ?: return@forEachIndexed
+                                vm.updateSource(i) { it.copy(selected = if (allSelected) emptySet() else if (info.isPlaylist) info.entries.map { e -> e.index }.toSet() else setOf(1)) }
+                            }
+                        },
+                        Modifier.fillMaxWidth(), icon = Icons.Outlined.PlaylistAddCheck,
+                    )
                     Spacer(Modifier.height(14.dp))
                     BtnGold(
                         "Baixar $selectedCount ${if (selectedCount == 1) "Faixa" else "Faixas"}", { vm.downloadBatch() }, Modifier.fillMaxWidth(),
