@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -123,8 +125,13 @@ fun HomeScreen(vm: MainViewModel) {
     val active = items.filter { it.active }
     val speed = active.sumOf { it.speed }
 
+    // Quando o link é lido, a tela rola sozinha até a prévia
+    val listState = rememberLazyListState()
+    LaunchedEffect(info?.id) { if (info != null) listState.animateScrollToItem(2) }
+
     LazyColumn(
         Modifier.fillMaxWidth(),
+        state = listState,
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -32,7 +32,7 @@ data class DownloadOptions(
     val audioFormat: String = "mp3",
     val audioBitrate: Int = 320,
     /** auto, h264, vp9, av1 */
-    val codecVideo: String = "auto",
+    val codecVideo: String = "h264",
     val fps30: Boolean = false,
     /** Faixa de áudio escolhida (null = a original) */
     val audioLang: String? = null,

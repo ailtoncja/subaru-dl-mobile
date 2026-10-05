@@ -68,7 +68,8 @@ object Args {
         // WebM só aceita VP9/AV1 + Opus: ajusta o codec para o arquivo sair válido
         val webm = o.container == "webm" && !o.keepOriginal
         val codecVideo = if (webm && (o.codecVideo == "h264" || o.codecVideo == "auto")) "vp9" else o.codecVideo
-        val sortAudio = if (webm) "acodec:opus" else null
+        // MP4 toca em qualquer celular com H.264 + AAC; AV1/Opus dentro de MP4 trava em muitos aparelhos
+        val sortAudio = if (webm) "acodec:opus" else if (o.container == "mp4" && !o.keepOriginal) "acodec:aac" else null
 
         if (o.formatId != null) {
             a += listOf("-f", if (o.formatVideoOnly) "${o.formatId}+$audioLang/${o.formatId}" else o.formatId)
@@ -76,7 +77,8 @@ object Args {
             val filter = (if (o.quality == "best") "" else "[height<=${o.quality}]") + (if (o.fps30) "[fps<=30]" else "")
             // Se não existir na qualidade pedida, pega a mais próxima abaixo; em último caso, a pior disponível
             a += listOf("-f", "bv*$filter+$audioLang/b$filter/wv*+ba/w")
-            a += listOf("-S", listOfNotNull("lang", sortCodec[codecVideo], sortAudio).joinToString(","))
+            // "res" antes do codec: a qualidade pedida manda; o codec só desempata (H.264 a 1080p ganha do VP9 a 1080p)
+            a += listOf("-S", listOfNotNull("lang", "res", sortCodec[codecVideo], sortAudio).joinToString(","))
         }
         if (!o.keepOriginal) a += listOf("--merge-output-format", o.container, "--remux-video", o.container)
         return a

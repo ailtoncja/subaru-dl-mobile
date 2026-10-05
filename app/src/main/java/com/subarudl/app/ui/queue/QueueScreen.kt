@@ -163,7 +163,7 @@ fun QueueScreen(vm: MainViewModel) {
                     val anyPaused = items.any { it.status == Status.PAUSED }
                     val anyRunning = items.any { it.active || it.status == Status.WAITING }
                     if (anyPaused && !anyRunning) {
-                        BtnGhost("Retomar Todos", { vm.manager.resumeAll() }, Modifier.weight(1f), icon = Icons.Outlined.PlayArrow, color = C.Gold)
+                        BtnGhost("Retomar", { vm.manager.resumeAll() }, Modifier.weight(1f), icon = Icons.Outlined.PlayArrow, color = C.Gold)
                     } else {
                         BtnGhost("Pausar Todos", { vm.manager.pauseAll() }, Modifier.weight(1f), icon = Icons.Outlined.PauseCircle, color = C.Gold, enabled = anyRunning)
                     }
@@ -190,7 +190,7 @@ fun QueueScreen(vm: MainViewModel) {
                     Icon(Icons.Outlined.Search, null, Modifier.size(20.dp), tint = C.Muted)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) Text("Filtrar por nome ou link…", style = T.bodySm.copy(fontSize = 14.sp), color = C.Dim)
+                        if (query.isEmpty()) Text("Filtrar…", style = T.bodySm.copy(fontSize = 14.sp), color = C.Dim)
                         BasicTextField(query, { query = it }, singleLine = true, textStyle = T.bodyMd.copy(fontSize = 14.sp), cursorBrush = SolidColor(C.Gold), modifier = Modifier.fillMaxWidth())
                     }
                 }

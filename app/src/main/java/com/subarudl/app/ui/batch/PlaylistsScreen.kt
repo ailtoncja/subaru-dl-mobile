@@ -168,7 +168,7 @@ fun PlaylistsScreen(vm: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         val allSelected = sources.all { s -> s.info == null || s.selected.size >= s.total }
                         BtnGhost(
-                            if (allSelected) "Desmarcar Todos" else "Marcar Todos",
+                            if (allSelected) "Desmarcar" else "Marcar tudo",
                             {
                                 sources.forEachIndexed { i, s ->
                                     val info = s.info ?: return@forEachIndexed

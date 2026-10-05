@@ -87,8 +87,9 @@ class DownloadManager(private val app: Application) {
     private fun autoUpdate() {
         val s = SettingsStore.value
         if (!s.autoUpdateTools || System.currentTimeMillis() - s.lastToolsCheck < 12 * 3600_000L || !_net.value.online) return
-        SettingsStore.update { it.copy(lastToolsCheck = System.currentTimeMillis()) }
-        Engine.updateYtdlp(app)
+        val msg = Engine.updateYtdlp(app, waitSeconds = 0)
+        // Se estava ocupado, não conta como verificado: tenta de novo na próxima abertura
+        if (!msg.startsWith("Há downloads")) SettingsStore.update { it.copy(lastToolsCheck = System.currentTimeMillis()) }
     }
 
     private fun load() {

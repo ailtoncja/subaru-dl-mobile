@@ -339,12 +339,12 @@ fun Tabs(items: List<Pair<String, Int?>>, selected: Int, onSelect: (Int) -> Unit
                 selectedContentColor = C.Gold, unselectedContentColor = C.Muted,
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(title, style = T.labelLg, maxLines = 1)
+                        Text(title, style = T.labelLg.copy(fontSize = 13.sp), maxLines = 1)
                         if (count != null) {
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(5.dp))
                             Text(
                                 count.toString(),
-                                Modifier.clip(CircleShape).background(if (i == selected) Color(0x33FACC15) else Color(0x1AFFFFFF)).padding(horizontal = 8.dp, vertical = 1.dp),
+                                Modifier.clip(CircleShape).background(if (i == selected) Color(0x33FACC15) else Color(0x1AFFFFFF)).padding(horizontal = 6.dp, vertical = 1.dp),
                                 style = T.labelSm.copy(fontWeight = FontWeight.Bold), color = if (i == selected) C.Gold else C.Muted,
                             )
                         }

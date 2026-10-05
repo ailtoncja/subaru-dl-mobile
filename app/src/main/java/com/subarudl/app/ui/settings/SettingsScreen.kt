@@ -236,7 +236,7 @@ private fun MainSettings(vm: MainViewModel, onPage: (String?) -> Unit) {
         item {
             Group {
                 RowItem(Icons.Outlined.Hd, "Resolução de Vídeo", "Prioridade máxima ao indexar streams", onClick = { dialog = "quality" }) {
-                    ValueChip(qualityChoices.firstOrNull { it.first == s.quality }?.second ?: s.quality); Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = C.Muted)
+                    ValueChip(if (s.quality == "best") "Melhor" else qualityChoices.firstOrNull { it.first == s.quality }?.second ?: s.quality); Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = C.Muted)
                 }
                 RowItem(Icons.Outlined.Equalizer, "Qualidade de Áudio", "Taxa de bits para MP3/M4A/OPUS", onClick = { dialog = "bitrate" }) {
                     ValueChip("${s.audioBitrate} kbps")

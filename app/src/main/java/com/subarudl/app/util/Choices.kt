@@ -58,7 +58,7 @@ val videoCodecs = listOf(Opt("auto", "Automático"), Opt("h264", "H.264 (compat�
 
 // ---------- Faixas de áudio ----------
 
-private fun shortLang(code: String) = languageName(code).substringBefore(" (")
+
 
 fun audioTrackLabel(code: String, original: String?): String {
     if (code == "") return if (original != null) "${languageName(original)} • original (padrão)" else "Padrão do vídeo"
@@ -81,8 +81,8 @@ private fun subOrder(codes: List<String>): List<String> {
 
 /** (manuais, automáticas), cada uma com valor "m:xx" / "a:xx". */
 fun subtitleChoices(info: MediaInfo): Pair<List<SubChoice>, List<SubChoice>> =
-    subOrder(info.subs).map { SubChoice("m:$it", shortLang(it)) } to
-        subOrder(info.autoSubs).map { SubChoice("a:$it", shortLang(it) + (if (it.endsWith("-orig")) " (original)" else "") + " • automática") }
+    subOrder(info.subs).map { SubChoice("m:$it", languageName(it)) } to
+        subOrder(info.autoSubs).map { SubChoice("a:$it", languageName(it) + (if (it.endsWith("-orig")) " (original)" else "") + " • automática") }
 
 fun subtitleValue(s: SubOptions): String {
     if (!s.enabled) return ""
@@ -98,5 +98,5 @@ fun applySubtitle(s: SubOptions, value: String): SubOptions = when (value) {
 
 fun subtitleLabel(s: SubOptions): String {
     if (s.all) return "todas"
-    return s.langs.joinToString(", ") { shortLang(it) }
+    return s.langs.joinToString(", ") { languageName(it) }
 }

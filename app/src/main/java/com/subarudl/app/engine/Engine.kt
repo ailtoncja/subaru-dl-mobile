@@ -9,6 +9,8 @@ import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 data class EngineState(
     val ready: Boolean = false,
@@ -25,6 +27,21 @@ object Engine {
 
     @Volatile
     private var started = false
+
+    /**
+     * Trava entre quem USA o yt-dlp (ler links, baixar: vários ao mesmo tempo) e quem o TROCA (atualização).
+     * Sem isso, atualizar enquanto um download lê o arquivo corrompe a leitura.
+     */
+    private val gate = ReentrantReadWriteLock()
+
+    fun <R> shared(block: () -> R): R {
+        gate.readLock().lock()
+        try {
+            return block()
+        } finally {
+            gate.readLock().unlock()
+        }
+    }
 
     @Synchronized
     fun init(ctx: Context) {
@@ -53,7 +70,9 @@ object Engine {
     }
 
     /** Atualiza o yt-dlp. Devolve uma frase para mostrar ao usuário. */
-    fun updateYtdlp(ctx: Context): String {
+    fun updateYtdlp(ctx: Context, waitSeconds: Long = 20): String {
+        // Só atualiza quando ninguém está usando o yt-dlp
+        if (!gate.writeLock().tryLock(waitSeconds, TimeUnit.SECONDS)) return "Há downloads em andamento. Atualize quando terminarem."
         _state.value = _state.value.copy(updating = true)
         return try {
             val before = YoutubeDL.version(ctx)
@@ -66,6 +85,8 @@ object Engine {
             _state.value = _state.value.copy(updating = false)
             AppLog.e("Falha ao atualizar o yt-dlp: ${e.message}")
             "Não consegui atualizar: ${e.message?.take(120)}"
+        } finally {
+            gate.writeLock().unlock()
         }
     }
 

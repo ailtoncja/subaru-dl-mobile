@@ -21,7 +21,7 @@ data class AppSettings(
     val container: String = "mp4",
     val audioFormat: String = "mp3",
     val audioBitrate: Int = 320,
-    val codecVideo: String = "auto",
+    val codecVideo: String = "h264",
     val fps30: Boolean = false,
     val clipboardCapture: Boolean = true,
     // Legendas e pós-processamento

@@ -42,7 +42,7 @@ object Ytdlp {
         AppLog.cmd(Args.forLog(args) + " " + url, trackId)
         val req = YoutubeDLRequest(url).addCommands(args)
         val response = try {
-            YoutubeDL.execute(req, "info-" + UUID.randomUUID())
+            Engine.shared { YoutubeDL.execute(req, "info-" + UUID.randomUUID()) }
         } catch (e: YoutubeDLException) {
             val raw = e.message ?: ""
             AppLog.e(cleanError(raw), trackId)
@@ -66,7 +66,7 @@ object Ytdlp {
         AppLog.cmd(Args.forLog(args) + " " + item.url, item.id)
         val req = YoutubeDLRequest(item.url).addCommands(args)
         val response = try {
-            YoutubeDL.execute(req, item.id) { _, _, line -> onLine(line) }
+            Engine.shared { YoutubeDL.execute(req, item.id) { _, _, line -> onLine(line) } }
         } catch (e: YoutubeDLException) {
             val raw = e.message ?: ""
             raw.lines().filter { it.startsWith("WARNING") }.forEach { AppLog.w(it, item.id) }
