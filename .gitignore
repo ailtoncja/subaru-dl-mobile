@@ -20,3 +20,4 @@ keystore.properties
 app/build/
 app/release/
 .kotlin/
+dist/

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -70,7 +71,7 @@ fun LoginDialog(onDone: (Int) -> Unit) {
     }
 
     Dialog(onDismissRequest = { onDone(0) }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(C.Surface).windowInsetsPadding(WindowInsets.statusBars).padding(12.dp)) {
+        Column(Modifier.fillMaxSize().background(C.Surface).windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     address, { address = it }, Modifier.weight(1f), singleLine = true, label = { Text("Endereço do site") }, colors = fieldColors(), textStyle = T.labelLg,
