@@ -24,8 +24,8 @@ android {
         // Android 10+: salvar em Filmes/Música/Imagens sem pedir permissão (armazenamento por escopo)
         minSdk = 29
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.1.0"
+        versionCode = 4
+        versionName = "1.1.1"
         // Celulares (arm64) e o emulador (x86_64): o resto só engordaria o APK
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

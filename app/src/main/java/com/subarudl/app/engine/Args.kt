@@ -16,6 +16,10 @@ object Args {
 
     fun cookiesFile(ctx: Context) = File(ctx.filesDir, "cookies.txt")
 
+    /** Certificados de autoridades (os mesmos do Python embutido), ou null se o motor ainda não foi preparado. */
+    fun caCertificates(ctx: Context): File? =
+        File(ctx.noBackupFilesDir, "youtubedl-android/packages/python/usr/etc/tls/cert.pem").takeIf { it.isFile && it.length() > 0 }
+
     /** Divide uma linha de argumentos respeitando aspas: `-x "a b"` → ["-x", "a b"] */
     fun split(text: String): List<String> =
         Regex("\"([^\"]*)\"|'([^']*)'|(\\S+)").findAll(text).map { it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3] } } }.toList()
@@ -164,8 +168,10 @@ object Args {
         }
 
         // Velocidade: aria2 (Turbo) ou fragmentos em paralelo
-        if (s.turbo) {
-            a += listOf("--downloader", "libaria2c.so", "--downloader-args", "aria2c:-x 8 -s 8 -k 1M")
+        val ca = caCertificates(ctx)
+        if (s.turbo && ca != null) {
+            // O aria2c do Android não acha os certificados do sistema e recusaria todo site https: aponta o arquivo embutido
+            a += listOf("--downloader", "libaria2c.so", "--downloader-args", "aria2c:-x 8 -s 8 -k 1M --ca-certificate=${ca.absolutePath}")
             a += listOf("--concurrent-fragments", "4")
         } else {
             a += listOf("--concurrent-fragments", "3")

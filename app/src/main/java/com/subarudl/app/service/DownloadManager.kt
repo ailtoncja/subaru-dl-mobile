@@ -325,6 +325,17 @@ class DownloadManager(private val app: Application) {
         item(id)?.let { Notifier.finished(app, it, false) }
     }
 
+    /** Linha de progresso do aria2c (Turbo): `[#a1b2c3 16KiB/422KiB(3%) CN:1 DL:29KiB ETA:13s]` */
+    private val aria2Line = Regex("""^\[#\w+ ([\d.]+)([KMGT]?i?B)/([\d.]+)([KMGT]?i?B)(?:\((\d+)%\))? CN:\d+(?: SD:\d+)? DL:([\d.]+)([KMGT]?i?B)(?: ETA:(\S+))?]""")
+
+    private fun aria2Bytes(n: String, unit: String): Double =
+        n.toDouble() * when (unit.first()) { 'K' -> 1024.0; 'M' -> 1048576.0; 'G' -> 1073741824.0; 'T' -> 1099511627776.0; else -> 1.0 }
+
+    private fun aria2Eta(text: String): Long =
+        if (text.isEmpty()) -1 else Regex("(\\d+)([dhms])").findAll(text).sumOf { m ->
+            m.groupValues[1].toLong() * when (m.groupValues[2]) { "d" -> 86400L; "h" -> 3600L; "m" -> 60L; else -> 1L }
+        }
+
     private fun num(v: String?): Double? {
         if (v == null || v == "NA" || v == "None" || v.isEmpty()) return null
         return v.toDoubleOrNull()
@@ -408,6 +419,29 @@ class DownloadManager(private val app: Application) {
                             )
                         }
                         if (item.isPlaylist && path.isNotEmpty()) File(path).takeIf { it.exists() }?.let(::deliver)
+                    }
+                }
+                line.startsWith("[#") && aria2Line.containsMatchIn(line.trim()) -> {
+                    // O aria2c escreve o próprio progresso (o yt-dlp não repassa): vira a barra do app
+                    val m = aria2Line.find(line.trim())!!
+                    val done = aria2Bytes(m.groupValues[1], m.groupValues[2])
+                    val total = aria2Bytes(m.groupValues[3], m.groupValues[4])
+                    val speed = aria2Bytes(m.groupValues[6], m.groupValues[7])
+                    val fraction = if (total > 0) done / total else 0.0
+                    val now = System.currentTimeMillis()
+                    if (now - (lastEmit[id] ?: 0) > 250 && item(id)?.status != Status.PAUSED && !interrupted.contains(id)) {
+                        lastEmit[id] = now
+                        mutate(id, persist = false) { x ->
+                            val n = x.itemCount
+                            val overall = if (n > 1 && x.itemIndex >= 1) (x.itemIndex - 1 + fraction) / n else fraction
+                            x.copy(
+                                status = Status.DOWNLOADING,
+                                progress = overall.toFloat().coerceIn(0f, 1f),
+                                downloaded = done.toLong(), total = total.toLong(), speed = speed,
+                                eta = aria2Eta(m.groupValues[8]),
+                                stage = if (item.options.mode == Mode.AUDIO) "Baixando áudio" else "Baixando vídeo",
+                            )
+                        }
                     }
                 }
                 line.isNotBlank() -> if (line.startsWith("[") || line.startsWith("WARNING") || line.startsWith("ERROR")) AppLog.i(line.trim(), id)

@@ -21,6 +21,7 @@ fun errorHint(raw: String): String? = when {
     Regex("Sign in to confirm|confirm you.re not a bot|age.restricted|login required", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O site pediu login. Entre na sua conta em Ajustes → Contas e cookies."
     Regex("Private video|members.only|Join this channel", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Vídeo privado ou só para membros. Entre na conta que tem acesso em Ajustes → Contas e cookies."
     Regex("Video unavailable|not available|has been removed|removed by", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O vídeo não está disponível (removido, bloqueado na região ou privado)."
+    Regex("aria2c exited with code", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O Turbo (aria2) falhou. Desligue o Turbo Boost em Ajustes e tente de novo."
     Regex("No space left|ENOSPC", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Acabou o espaço no aparelho."
     Regex("Unsupported URL", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Esse link não é suportado."
     Regex("Requested format is not available", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "A qualidade pedida não existe nesse vídeo. Tente \"Melhor disponível\"."
@@ -62,6 +63,17 @@ object Ytdlp {
 
     /** Roda o download. Cada linha de saída vai para [onLine]. Lança [EngineException] em caso de erro. */
     fun download(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, onLine: (String) -> Unit) {
+        try {
+            runDownload(ctx, item, s, workDir, onLine)
+        } catch (e: EngineException) {
+            // O Turbo (aria2) é um extra: se ele falhar, o download continua do jeito normal em vez de dar erro
+            if (!s.turbo || e.message?.contains("aria2c", ignoreCase = true) != true) throw e
+            AppLog.w("O Turbo (aria2) falhou (${e.message}). Baixando sem ele.", item.id)
+            runDownload(ctx, item, s.copy(turbo = false), workDir, onLine)
+        }
+    }
+
+    private fun runDownload(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, onLine: (String) -> Unit) {
         val args = Args.download(ctx, item, s, workDir)
         AppLog.cmd(Args.forLog(args) + " " + item.url, item.id)
         val req = YoutubeDLRequest(item.url).addCommands(args)

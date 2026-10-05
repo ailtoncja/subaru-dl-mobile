@@ -69,6 +69,12 @@ aberta. O código está em `data/CookieReceiver.kt` (celular) e `src/main/celula
 
 Teste no emulador: `adb forward tcp:38475 tcp:38475`; o PC acha o emulador em 127.0.0.1.
 
+## Turbo (aria2c)
+
+O aria2c do Android não acha os certificados do sistema e recusava todo site https ("aria2c exited with code 1").
+Agora o app aponta o arquivo de certificados embutido (`--ca-certificate`), mostra o progresso do aria2c na barra
+e, se o Turbo falhar por qualquer motivo, refaz o download sem ele em vez de dar erro.
+
 ## Diferenças em relação ao PC
 
 - Sem bandeja, atalhos globais e monitor de área de transferência em segundo plano (o Android não deixa); no lugar,
