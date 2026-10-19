@@ -21,3 +21,10 @@ app/build/
 app/release/
 .kotlin/
 dist/
+
+# impeccable: capturas, esboços e estado local (o PRODUCT.md, o DESIGN.md e .impeccable/surfaces entram no Git)
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/decision-payload.json
+.impeccable/hook.cache.json

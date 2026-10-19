@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T16:00:00-03:00",
+  "title": "Design System: Subaru DL",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Amarelo Subaru", "canonical": "#ffd200", "tonalRamp": ["#221b00", "#3a2f00", "#574600", "#725d00", "#a68900", "#d6b300", "#ffd200", "#ffe37f"] },
+      "on-primary": { "role": "primary", "displayName": "Oliva Escuro (texto sobre amarelo)", "canonical": "#3a2f00" },
+      "primary-container": { "role": "primary", "displayName": "Oliva Profundo", "canonical": "#574600" },
+      "on-primary-container": { "role": "primary", "displayName": "Creme Amarelo", "canonical": "#ffe37f" },
+      "inverse-primary": { "role": "primary", "displayName": "Amarelo Invertido (ação do snackbar)", "canonical": "#725d00" },
+      "secondary": { "role": "secondary", "displayName": "Pervinca Clara", "canonical": "#bcc5eb", "tonalRamp": ["#111a39", "#262f4e", "#2d3960", "#4a5680", "#7883ab", "#9aa4cc", "#bcc5eb", "#dce1ff"] },
+      "on-secondary": { "role": "secondary", "displayName": "Marinho sobre Pervinca", "canonical": "#262f4e" },
+      "secondary-container": { "role": "secondary", "displayName": "Azul de Seleção", "canonical": "#2d3960" },
+      "on-secondary-container": { "role": "secondary", "displayName": "Pervinca Gelo", "canonical": "#dce1ff" },
+      "tertiary": { "role": "tertiary", "displayName": "Dourado Subaru", "canonical": "#d9b44a", "tonalRamp": ["#251a00", "#3e2e00", "#574400", "#725a10", "#a6852c", "#d9b44a", "#f0cd68", "#ffe08e"] },
+      "on-tertiary": { "role": "tertiary", "displayName": "Bronze Escuro", "canonical": "#3e2e00" },
+      "tertiary-container": { "role": "tertiary", "displayName": "Ouro Velho", "canonical": "#574400" },
+      "on-tertiary-container": { "role": "tertiary", "displayName": "Creme Dourado", "canonical": "#ffe08e" },
+      "error": { "role": "error", "displayName": "Rosa Erro", "canonical": "#ffb4ab", "tonalRamp": ["#410002", "#690005", "#93000a", "#c0201b", "#e5524a", "#ff897d", "#ffb4ab", "#ffdad6"] },
+      "on-error": { "role": "error", "displayName": "Vinho Escuro", "canonical": "#690005" },
+      "error-container": { "role": "error", "displayName": "Vinho Erro", "canonical": "#93000a" },
+      "on-error-container": { "role": "error", "displayName": "Rosa Claro", "canonical": "#ffdad6" },
+      "surface": { "role": "neutral", "displayName": "Marinho Subaru", "canonical": "#0c1430", "tonalRamp": ["#070d22", "#0c1430", "#111a39", "#162042", "#1d284d", "#253159", "#2d3860", "#3a4468"] },
+      "on-surface": { "role": "neutral", "displayName": "Branco Azulado", "canonical": "#e2e6f4", "tonalRamp": ["#283050", "#3a4468", "#5d6687", "#8d94ae", "#a9afc6", "#c3c9de", "#e2e6f4", "#f3f5fb"] },
+      "surface-variant": { "role": "neutral", "displayName": "Marinho Variante", "canonical": "#283358" },
+      "on-surface-variant": { "role": "neutral", "displayName": "Cinza Pervinca", "canonical": "#c3c9de" },
+      "surface-container-lowest": { "role": "neutral", "displayName": "Marinho Fundo", "canonical": "#070d22" },
+      "surface-container-low": { "role": "neutral", "displayName": "Marinho Cartão", "canonical": "#111a39" },
+      "surface-container": { "role": "neutral", "displayName": "Marinho Barra", "canonical": "#162042" },
+      "surface-container-high": { "role": "neutral", "displayName": "Marinho Campo", "canonical": "#1d284d" },
+      "surface-container-highest": { "role": "neutral", "displayName": "Marinho Trilho", "canonical": "#253159" },
+      "surface-bright": { "role": "neutral", "displayName": "Marinho Claro", "canonical": "#2d3860" },
+      "surface-tint": { "role": "neutral", "displayName": "Tinta de Elevação", "canonical": "#b4c3ff" },
+      "inverse-surface": { "role": "neutral", "displayName": "Snackbar", "canonical": "#e2e6f4" },
+      "inverse-on-surface": { "role": "neutral", "displayName": "Texto do Snackbar", "canonical": "#283050" },
+      "outline": { "role": "neutral", "displayName": "Contorno", "canonical": "#8d94ae" },
+      "outline-variant": { "role": "neutral", "displayName": "Contorno Suave", "canonical": "#3a4468" },
+      "scrim": { "role": "neutral", "displayName": "Véu", "canonical": "#000000" }
+    },
+    "typographyMeta": {
+      "display-small": { "displayName": "Display Small", "purpose": "Só o código de 8 letras ao receber cookies do PC (com tnum)." },
+      "title-large": { "displayName": "Title Large", "purpose": "Título da barra de cima (Subaru DL, páginas dos Ajustes)." },
+      "title-medium": { "displayName": "Title Medium", "purpose": "Título do vídeo no alto das folhas; título do estado vazio." },
+      "title-small": { "displayName": "Title Small", "purpose": "Título do cartão (2 linhas), títulos de seção em amarelo, rótulos das folhas, título dos avisos." },
+      "body-large": { "displayName": "Body Large", "purpose": "Campo do link, linhas de lista." },
+      "body-medium": { "displayName": "Body Medium", "purpose": "Textos de apoio e mensagens das folhas." },
+      "body-small": { "displayName": "Body Small", "purpose": "Dicas e detalhe técnico." },
+      "body-small-tabular": { "displayName": "Body Small Tabular", "purpose": "Linha de dados dos cartões e linha de armazenamento: números que mudam." },
+      "label-large": { "displayName": "Label Large", "purpose": "Botões, chips, FAB." },
+      "label-small": { "displayName": "Label Small", "purpose": "Duração sobre a capa e número da foto, com tnum." }
+    },
+    "shadows": [
+      { "name": "none-tonal", "value": "none", "purpose": "Nenhuma sombra própria: a profundidade é por degrau de surface-container. FAB, menus e snackbar mantêm só a elevação padrão do Material." }
+    ],
+    "motion": [
+      { "name": "ease-emphasized-decelerate", "value": "cubic-bezier(0.05, 0.7, 0.1, 1)", "purpose": "Entrada da tela nova no eixo X compartilhado." },
+      { "name": "ease-emphasized-accelerate", "value": "cubic-bezier(0.3, 0, 0.8, 0.15)", "purpose": "Saída da tela anterior no eixo X compartilhado." },
+      { "name": "shared-axis-x-enter", "value": "slide 1/8 da largura, 350ms + fade-in 200ms com 80ms de atraso", "purpose": "Tela principal para Ajustes e para subpáginas (avançar)." },
+      { "name": "shared-axis-x-exit", "value": "slide 1/8 da largura, 200ms + fade-out 100ms", "purpose": "Tela que sai; o lado inverte ao voltar." },
+      { "name": "list-item-placement", "value": "Modifier.animateItem() (padrão do Compose)", "purpose": "Cartões e títulos de seção deslizando para o lugar quando mudam de seção ou chegam ao topo." },
+      { "name": "fab-collapse", "value": "ExtendedFloatingActionButton expanded = lista parada ou subindo", "purpose": "FAB Colar link recolhe para o ícone ao rolar para baixo." },
+      { "name": "photo-select", "value": "animateDpAsState inset 0 -> 10dp, canto 4dp -> 12dp", "purpose": "Foto marcada na grade de imagens, estilo Google Fotos." }
+    ],
+    "breakpoints": [
+      { "name": "content-max", "value": "720dp" },
+      { "name": "centered-column", "value": "largura > 720dp: margem lateral = (largura - 720dp) / 2" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão cheio",
+      "kind": "button",
+      "refersTo": "button-filled-sheet",
+      "description": "Ação principal de uma folha (Baixar, Abrir, Retomar, o remédio de uma falha).",
+      "html": "<button class=\"ds-btn-filled\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z\"/></svg>Baixar</button>",
+      "css": ".ds-btn-filled { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px; border: none; border-radius: 9999px; background: #ffd200; color: #3a2f00; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; cursor: pointer; transition: box-shadow 0.2s, background 0.2s; } .ds-btn-filled:hover { background: linear-gradient(rgba(58,47,0,0.08), rgba(58,47,0,0.08)), #ffd200; } .ds-btn-filled:focus-visible { outline: 3px solid #e2e6f4; outline-offset: 2px; } .ds-btn-filled:active { background: linear-gradient(rgba(58,47,0,0.12), rgba(58,47,0,0.12)), #ffd200; }"
+    },
+    {
+      "name": "Botão tonal e contornado",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Segunda ação (tonal) e alternativa (contornado), lado a lado nas folhas.",
+      "html": "<div class=\"ds-btn-row\"><button class=\"ds-btn-tonal\">Compartilhar</button><button class=\"ds-btn-outlined\">Pôr na fila</button></div>",
+      "css": ".ds-btn-row { display: flex; gap: 8px; background: #111a39; padding: 16px; } .ds-btn-tonal, .ds-btn-outlined { height: 40px; padding: 0 24px; border-radius: 9999px; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; cursor: pointer; } .ds-btn-tonal { background: #2d3960; color: #dce1ff; border: none; } .ds-btn-outlined { background: transparent; color: #ffd200; border: 1px solid #8d94ae; } .ds-btn-tonal:hover { background: #36436c; } .ds-btn-outlined:hover { background: rgba(255,210,0,0.08); } .ds-btn-tonal:focus-visible, .ds-btn-outlined:focus-visible { outline: 3px solid #e2e6f4; outline-offset: 2px; }"
+    },
+    {
+      "name": "FAB Colar link",
+      "kind": "button",
+      "refersTo": "fab-extended",
+      "description": "Botão flutuante amarelo no canto inferior direito; recolhe para o ícone ao rolar para baixo.",
+      "html": "<button class=\"ds-fab\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"5\" y=\"4\" width=\"14\" height=\"17\" rx=\"2\"/><rect x=\"9\" y=\"2\" width=\"6\" height=\"4\" rx=\"1\"/></svg><span>Colar link</span></button>",
+      "css": ".ds-fab { display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 0 20px 0 16px; border: none; border-radius: 16px; background: #ffd200; color: #3a2f00; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15); cursor: pointer; } .ds-fab:hover { background: linear-gradient(rgba(58,47,0,0.08), rgba(58,47,0,0.08)), #ffd200; } .ds-fab:focus-visible { outline: 3px solid #e2e6f4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo do link",
+      "kind": "input",
+      "refersTo": "link-field",
+      "description": "Pílula de 56dp em surface-container-high, sem linha indicadora; ícone de link e ação de colar.",
+      "html": "<label class=\"ds-link-field\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1\"/><path d=\"M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1\"/></svg><input placeholder=\"Cole ou compartilhe um link\"></label>",
+      "css": ".ds-link-field { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-radius: 28px; background: #1d284d; color: #c3c9de; } .ds-link-field input { flex: 1; background: transparent; border: none; outline: none; color: #e2e6f4; font: 400 16px/24px Roboto, sans-serif; letter-spacing: 0.5px; } .ds-link-field input::placeholder { color: #c3c9de; } .ds-link-field:focus-within { color: #e2e6f4; } .ds-link-field input { caret-color: #ffd200; }"
+    },
+    {
+      "name": "Chips de filtro",
+      "kind": "chip",
+      "refersTo": "chip-filter-selected",
+      "description": "Vídeo / Áudio / Imagens e qualidades: escolha única, marcado em secondary-container com check.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-on\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z\"/></svg>Vídeo</button><button class=\"ds-chip\">Áudio</button><button class=\"ds-chip\">Imagens</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 16px; border-radius: 8px; border: 1px solid #8d94ae; background: transparent; color: #c3c9de; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; cursor: pointer; } .ds-chip-on { padding-left: 8px; border-color: transparent; background: #2d3960; color: #dce1ff; } .ds-chip:hover { background: rgba(195,201,222,0.08); } .ds-chip-on:hover { background: #36436c; } .ds-chip:focus-visible { outline: 3px solid #e2e6f4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Cartão de download",
+      "kind": "card",
+      "refersTo": "card-download",
+      "description": "Capa 16:9 de 104dp, título em 2 linhas, barra de progresso de 4dp, linha de dados tabular, uma ação à direita.",
+      "html": "<div class=\"ds-section\"><span>Baixando · 357 KB/s</span><button>Pausar tudo</button></div><div class=\"ds-card\"><div class=\"ds-thumb\"></div><div class=\"ds-card-body\"><div class=\"ds-card-title\">Big_Buck_Bunny_1080_10s_30MB</div><div class=\"ds-bar\"><i style=\"width:44%\"></i></div><div class=\"ds-meta\">44% · faltam 45 s · 357 KB/s</div></div><button class=\"ds-icon-btn\" aria-label=\"Pausar\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M6 5h4v14H6zm8 0h4v14h-4z\"/></svg></button></div><div class=\"ds-card\"><div class=\"ds-thumb\"></div><div class=\"ds-card-body\"><div class=\"ds-card-title\">Sintel_1080_10s_30MB</div><div class=\"ds-meta ds-done\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#d9b44a\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>MP4 · 30,0 MB</div></div></div>",
+      "css": ".ds-section { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 4px 0 16px; background: #0c1430; color: #ffd200; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; } .ds-section button { background: none; border: none; color: #ffd200; font: inherit; height: 40px; padding: 0 12px; border-radius: 9999px; cursor: pointer; } .ds-section button:hover { background: rgba(255,210,0,0.08); } .ds-card { display: flex; align-items: center; gap: 12px; margin: 4px 16px; padding: 12px 4px 12px 12px; border-radius: 12px; background: #111a39; color: #e2e6f4; cursor: pointer; } .ds-card:hover { background: linear-gradient(rgba(226,230,244,0.08), rgba(226,230,244,0.08)), #111a39; } .ds-card:focus-visible { outline: 3px solid #e2e6f4; } .ds-thumb { width: 104px; aspect-ratio: 16/9; border-radius: 8px; background: #253159; flex: none; } .ds-card-body { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; } .ds-card-title { font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .ds-bar { height: 4px; margin: 2px 0; border-radius: 9999px; background: #253159; overflow: hidden; } .ds-bar i { display: block; height: 100%; border-radius: 9999px; background: #ffd200; } .ds-meta { font: 400 12px/16px Roboto, sans-serif; letter-spacing: 0.4px; font-feature-settings: 'tnum'; color: #c3c9de; } .ds-done { display: flex; align-items: center; gap: 6px; } .ds-icon-btn { width: 48px; height: 48px; border: none; border-radius: 9999px; background: none; color: #c3c9de; cursor: pointer; } .ds-icon-btn:hover { background: rgba(195,201,222,0.08); }"
+    },
+    {
+      "name": "Cartão de falha",
+      "kind": "card",
+      "refersTo": "card-download",
+      "description": "Causa em uma linha na cor error e o remédio como botão de texto alinhado ao título.",
+      "html": "<div class=\"ds-fail\"><div class=\"ds-fail-thumb\"></div><div class=\"ds-fail-body\"><div class=\"ds-fail-title\">Jellyfish_360_10s_1MB</div><div class=\"ds-fail-cause\">O vídeo não tem som</div><button class=\"ds-fail-remedy\">Baixar como vídeo</button></div></div>",
+      "css": ".ds-fail { display: flex; align-items: flex-start; gap: 12px; margin: 4px 16px; padding: 12px 4px 12px 12px; border-radius: 12px; background: #111a39; color: #e2e6f4; } .ds-fail-thumb { width: 104px; aspect-ratio: 16/9; border-radius: 8px; background: #253159; flex: none; } .ds-fail-body { display: flex; flex-direction: column; gap: 4px; } .ds-fail-title { font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; } .ds-fail-cause { font: 400 12px/16px Roboto, sans-serif; letter-spacing: 0.4px; color: #ffb4ab; } .ds-fail-remedy { align-self: flex-start; margin-left: -12px; height: 40px; padding: 0 12px; border: none; border-radius: 9999px; background: none; color: #ffd200; font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; cursor: pointer; } .ds-fail-remedy:hover { background: rgba(255,210,0,0.08); } .ds-fail-remedy:focus-visible { outline: 3px solid #e2e6f4; }"
+    },
+    {
+      "name": "Aviso de erro",
+      "kind": "card",
+      "refersTo": "card-notice-error",
+      "description": "Cartão em error-container sob o campo do link; título, texto, detalhe técnico recolhível e ações em on-error-container.",
+      "html": "<div class=\"ds-notice\"><div class=\"ds-notice-row\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v6M12 16v1\"/></svg><div><div class=\"ds-notice-title\">O Instagram pediu login para este link.</div><button class=\"ds-notice-link\">Ver o detalhe técnico</button></div></div><div class=\"ds-notice-actions\"><button>Entrar na conta</button><button>Tentar de novo</button></div></div>",
+      "css": ".ds-notice { border-radius: 12px; background: #93000a; color: #ffdad6; padding-top: 14px; } .ds-notice-row { display: flex; gap: 12px; padding: 0 16px; align-items: flex-start; } .ds-notice-title { font: 500 14px/20px Roboto, sans-serif; letter-spacing: 0.1px; } .ds-notice-link, .ds-notice-actions button { height: 40px; padding: 0 12px; border: none; border-radius: 9999px; background: none; color: #ffdad6; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; } .ds-notice-link { margin-left: -12px; } .ds-notice-actions { display: flex; justify-content: flex-end; padding: 0 8px 4px 44px; } .ds-notice button:hover { background: rgba(255,218,214,0.08); } .ds-notice button:focus-visible { outline: 3px solid #ffdad6; }"
+    },
+    {
+      "name": "Barra de cima",
+      "kind": "nav",
+      "refersTo": "top-app-bar",
+      "description": "TopAppBar pequena: título à esquerda, busca e Ajustes à direita; passa para surface-container ao rolar.",
+      "html": "<header class=\"ds-topbar\"><h1>Subaru DL</h1><div><button aria-label=\"Buscar nos downloads\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 5 5\"/></svg></button><button aria-label=\"Ajustes\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1\"/></svg></button></div></header>",
+      "css": ".ds-topbar { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 4px 0 16px; background: #0c1430; color: #e2e6f4; transition: background 0.2s; } .ds-topbar:hover { background: #162042; } .ds-topbar h1 { margin: 0; font: 400 22px/28px Roboto, sans-serif; } .ds-topbar button { width: 48px; height: 48px; border: none; border-radius: 9999px; background: none; color: #c3c9de; cursor: pointer; } .ds-topbar button:hover { background: rgba(195,201,222,0.08); } .ds-topbar button:focus-visible { outline: 3px solid #e2e6f4; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Padrão Bem Feito",
+    "overview": "O Subaru DL no Android é o padrão da categoria jogado reto: um baixador em Material 3 que qualquer pessoa com Android lê de relance, com o campo do link no alto, os cartões dos downloads embaixo e o botão Colar link debaixo do polegar. A régua de capricho são o Seal e os apps do Google (Arquivos, Fotos). Não há metáfora, painel nem fantasia numa tela de trabalho: a marca entra só pelas três cores Subaru, pela escala de tipo e pelas formas do Material.\n\nO chão é o azul-marinho Subaru, e todas as camadas sobem no mesmo matiz azul: nada de cinza neutro. O amarelo é a cor que age (FAB, progresso, botões principais, títulos de seção) e o dourado quer dizer só uma coisa: terminou. As falhas usam os papéis de erro do Material, sem inventar vermelho próprio. A densidade é a de uma lista do Google: cartões compactos de uma linha de capa, título em duas linhas e uma linha de dados.\n\nTudo é escuro e tudo é em português do Brasil; não existe tema claro para manter.",
+    "keyCharacteristics": [
+      "Esquema escuro do Material 3 inteiro derivado das três cores Subaru.",
+      "Superfícies em degraus tonais do mesmo azul-marinho; profundidade por tom, não por sombra.",
+      "Roboto do sistema na escala padrão do Material 3; algarismos tabulares em tudo que muda (tamanho, velocidade, tempo).",
+      "Formas do Material sem desvio: cartão 12dp, campo pílula e folha 28dp, FAB 16dp, botões redondos, chips 8dp.",
+      "Ícones Material Symbols contornados (Icons.Outlined); preenchidos só no check de seleção e no play da grade de fotos.",
+      "Movimento do Material: eixo X compartilhado entre telas, itens da lista deslizando para o lugar, FAB que recolhe ao rolar."
+    ],
+    "rules": [
+      { "name": "A Regra do Marinho Único", "body": "Toda superfície é um degrau do azul-marinho Subaru. Nenhum cinza neutro, nenhuma cor de fundo fora da família surface-container.", "section": "colors" },
+      { "name": "A Regra do Dourado Terminado", "body": "O dourado aparece só onde algo terminou ou está pronto (download concluído, conta conectada). Nunca como destaque, decoração ou segundo amarelo.", "section": "colors" },
+      { "name": "A Regra do Erro sem Amarelo", "body": "Dentro do cartão de erro, os botões usam a cor do texto do aviso (on-error-container), não o amarelo. O amarelo não convive com o vinho.", "section": "colors" },
+      { "name": "A Regra dos Algarismos Fixos", "body": "Tamanhos, velocidades, porcentagens, tempos e durações usam o estilo `.tabular` (`tnum`), para que os números não tremam enquanto mudam.", "section": "typography" },
+      { "name": "A Regra da Escala Pura", "body": "Só os papéis do `Typography()` do Material 3, sem tamanhos inventados. O caráter vem do papel e da cor, não de uma fonte nova.", "section": "typography" },
+      { "name": "A Regra do Degrau Tonal", "body": "Para separar uma camada, suba um degrau de surface-container; não acrescente sombra, borda ou brilho.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do derivar toda cor nova dos papéis do esquema em Theme.kt; o marinho #0c1430, o amarelo #ffd200 e o dourado #d9b44a são obrigatórios.",
+      "Do usar surface-container-low (12dp) para cartões e subir um degrau tonal para destacar, como o campo do link em surface-container-high.",
+      "Do aplicar `.tabular` em todo texto com números que mudam.",
+      "Do manter 16dp de lateral e a coluna central de 720dp em telas largas.",
+      "Do dizer a falha em uma linha em português simples e oferecer o remédio como botão logo abaixo.",
+      "Do usar os componentes do Material 3 com seus formatos padrão (botões redondos, chips 8dp, folhas 28dp, FAB 16dp)."
+    ],
+    "donts": [
+      "Don't criar um tema claro ou cinzas neutros; toda superfície é um degrau do marinho.",
+      "Don't usar o dourado como destaque ou enfeite; ele significa só \"terminou\".",
+      "Don't pôr amarelo dentro do cartão de erro; ali tudo usa on-error-container.",
+      "Don't adicionar sombras próprias, bordas de cartão ou brilhos; a profundidade é tonal.",
+      "Don't trocar a Roboto do sistema por uma fonte de marca nem criar tamanhos fora da escala do Material 3.",
+      "Don't usar metáforas de painel, telemetria ou rali numa tela de trabalho."
+    ]
+  }
+}

@@ -59,6 +59,31 @@ fun audioBitrateOptions(info: MediaInfo?, lossless: Boolean): List<Opt<Int>> {
     }
 }
 
+/** Qualidades que existem de verdade, para escolher em chips: "1080p" com o tamanho estimado embaixo. */
+fun qualityChoices(info: MediaInfo?, fps30: Boolean): List<Opt<String>> {
+    if (info == null || info.isPlaylist) return genericQualities.map { if (it.value == "best") Opt("best", "Melhor") else Opt(it.value, it.value + "p") }
+    val heights = info.formats.filter { it.hasVideo && it.height != null && it.height >= 144 }.map { it.height!! }.distinct().sortedDescending()
+    if (heights.isEmpty()) return listOf(Opt("best", "Melhor"))
+    return heights.mapIndexed { i, h ->
+        val f = pickVideo(info, h, fps30)
+        val fps = f?.fps?.takeIf { it > 30 }?.let { " ${it.toInt()}fps" } ?: ""
+        Opt(if (i == 0) "best" else h.toString(), "${h}p$fps", estimateSize(info, h, fps30)?.let { formatBytes(it) })
+    }
+}
+
+/** O chip que vale para a qualidade escolhida: a maior altura que não passa dela (o que o yt-dlp vai baixar). */
+fun effectiveQuality(quality: String, choices: List<Opt<String>>): String {
+    if (choices.any { it.value == quality }) return quality
+    val q = quality.toIntOrNull() ?: return "best"
+    val heights = choices.mapNotNull { c -> c.label.takeWhile { it.isDigit() }.toIntOrNull()?.let { c.value to it } }
+    return heights.firstOrNull { it.second <= q }?.first ?: choices.lastOrNull()?.value ?: "best"
+}
+
+/** Taxas de áudio para chips, com o tamanho estimado quando se sabe a duração. */
+fun bitrateChoices(info: MediaInfo?): List<Opt<Int>> = listOf(320, 256, 192, 128, 96, 64).map { kbps ->
+    Opt(kbps, "$kbps kbps", info?.duration?.let { formatBytes(it * kbps * 1000L / 8) })
+}
+
 val videoContainers = listOf(Opt("mp4", "MP4"), Opt("mkv", "MKV"), Opt("webm", "WebM"))
 val audioFormats = listOf(Opt("mp3", "MP3"), Opt("m4a", "M4A"), Opt("opus", "OPUS"), Opt("aac", "AAC"), Opt("ogg", "OGG"), Opt("flac", "FLAC"), Opt("wav", "WAV"))
 val videoCodecs = listOf(Opt("auto", "Automático"), Opt("h264", "H.264 (compatível)"), Opt("vp9", "VP9"), Opt("av1", "AV1"))

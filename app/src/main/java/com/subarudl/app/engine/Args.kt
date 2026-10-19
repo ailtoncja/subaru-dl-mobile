@@ -171,7 +171,13 @@ object Args {
         val ca = caCertificates(ctx)
         if (s.turbo && ca != null) {
             // O aria2c do Android não acha os certificados do sistema e recusaria todo site https: aponta o arquivo embutido
-            a += listOf("--downloader", "libaria2c.so", "--downloader-args", "aria2c:-x 8 -s 8 -k 1M --ca-certificate=${ca.absolutePath}")
+            // O limite de velocidade do yt-dlp (-r) não vale para o aria2: ele recebe o mesmo limite pelo próprio parâmetro
+            val limit = s.rateLimit.trim().takeIf { Regex("^\\d+[KkMm]?$").matches(it) }?.let { " --max-overall-download-limit=${it.uppercase()}" } ?: ""
+            // O progresso normal do aria2 é reescrito na mesma linha (\r) e não chega ao app: um resumo por linha a cada segundo chega
+            a += listOf(
+                "--downloader", "libaria2c.so",
+                "--downloader-args", "aria2c:-x 8 -s 8 -k 1M --summary-interval=1 --show-console-readout=false --ca-certificate=${ca.absolutePath}$limit",
+            )
             a += listOf("--concurrent-fragments", "4")
         } else {
             a += listOf("--concurrent-fragments", "3")

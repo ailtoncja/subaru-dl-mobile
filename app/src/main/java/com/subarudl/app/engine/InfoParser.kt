@@ -85,7 +85,10 @@ fun parseInfo(d: JSONObject): MediaInfo {
     } else {
         d.str("thumbnail") ?: entryThumb(d)
     }
-    val site = siteName(d.str("extractor_key") ?: d.str("extractor") ?: "")
+    // Link direto para um arquivo: o yt-dlp chama o site de "Generic"; o endereço diz mais
+    val site = siteName(d.str("extractor_key") ?: d.str("extractor") ?: "").takeUnless { it.isEmpty() || it.equals("generic", ignoreCase = true) }
+        ?: runCatching { java.net.URI(d.str("webpage_url") ?: d.str("original_url") ?: "").host?.removePrefix("www.") }.getOrNull()
+        ?: ""
     return MediaInfo(
         id = d.optString("id"),
         title = d.str("title") ?: d.str("id") ?: "Sem título",

@@ -7,17 +7,40 @@ fun formatBytes(b: Long?): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var v = b.toDouble()
     var i = 0
-    while (v >= 1024 && i < units.lastIndex) {
+    // Troca de unidade a partir de 1000 para nunca mostrar "1024 KB" no lugar de "1,0 MB"
+    while (v >= 1000 && i < units.lastIndex) {
         v /= 1024
         i++
     }
-    return if (i == 0) "${v.toLong()} B" else String.format(Locale.US, if (v >= 100) "%.0f %s" else "%.1f %s", v, units[i])
+    return if (i == 0) "${v.toLong()} B" else String.format(PtBr, if (v >= 100) "%.0f %s" else "%.1f %s", v, units[i])
 }
 
+/** Números com vírgula, como se escreve no Brasil (3,2 MB/s). */
+private val PtBr: Locale = Locale.forLanguageTag("pt-BR")
+
 fun formatSpeed(bytesPerSec: Double): String {
-    if (bytesPerSec <= 0) return "0.0 KB/s"
+    if (bytesPerSec <= 0) return "0 KB/s"
     val kb = bytesPerSec / 1024
-    return if (kb >= 1024) String.format(Locale.US, "%.1f MB/s", kb / 1024) else String.format(Locale.US, "%.1f KB/s", kb)
+    return if (kb >= 1024) String.format(PtBr, "%.1f MB/s", kb / 1024) else String.format(PtBr, "%.0f KB/s", kb)
+}
+
+/** Duração longa em palavras ("106 h 45 min"); abaixo de uma hora, como num relógio ("12:30"). */
+fun formatLongDuration(sec: Long): String {
+    val h = sec / 3600
+    val m = (sec % 3600) / 60
+    return if (h > 0) "$h h" + if (m > 0) " $m min" else "" else formatDuration(sec)
+}
+
+/** Tempo que falta em palavras: "faltam 32 s", "faltam 4 min", "faltam 1 h 12 min". Vazio quando não se sabe. */
+fun formatRemaining(sec: Long): String {
+    if (sec < 0) return ""
+    val h = sec / 3600
+    val m = (sec % 3600) / 60
+    return when {
+        h > 0 -> "faltam $h h" + if (m > 0) " $m min" else ""
+        m > 0 -> "faltam $m min"
+        else -> "faltam $sec s"
+    }
 }
 
 fun formatDuration(sec: Long?): String {
@@ -54,6 +77,6 @@ fun extractLinks(text: String): List<String> = urlRegex.findAll(text).map { it.v
 fun languageName(code: String): String {
     val base = code.removeSuffix("-orig")
     val locale = Locale.forLanguageTag(base)
-    val name = locale.getDisplayName(Locale("pt", "BR"))
+    val name = locale.getDisplayName(PtBr)
     return if (name.isBlank() || name.equals(base, true)) base else name.replaceFirstChar { it.uppercase() }
 }

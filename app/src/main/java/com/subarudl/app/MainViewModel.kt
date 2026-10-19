@@ -2,6 +2,7 @@ package com.subarudl.app
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -12,6 +13,8 @@ import com.subarudl.app.data.GalleryFile
 import com.subarudl.app.data.GalleryOptions
 import com.subarudl.app.data.MediaInfo
 import com.subarudl.app.data.Mode
+import com.subarudl.app.data.QueueItem
+import com.subarudl.app.data.Status
 import com.subarudl.app.data.SettingsStore
 import com.subarudl.app.engine.Engine
 import com.subarudl.app.engine.EngineException
@@ -29,8 +32,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Tab(val label: String) { HOME("Início"), QUEUE("Fila"), PLAYLISTS("Playlists"), GALLERY("Galeria"), SETTINGS("Ajustes") }
-enum class QueueTab { ACTIVE, DONE, FAILED }
+/** As duas telas do app: a principal (colar e acompanhar) e os Ajustes. */
+enum class Screen { HOME, SETTINGS }
+
+/** O que o próximo link vira: vídeo, áudio ou as imagens de um perfil (gallery-dl). */
+enum class LinkJob(val label: String) { VIDEO("Vídeo"), AUDIO("Áudio"), IMAGES("Imagens") }
+
+/** Parte da lista para onde uma notificação leva. */
+enum class Section { ACTIVE, DONE, FAILED }
+
+/** Aviso rápido (snackbar), com uma ação opcional como "Desfazer". */
+class Toast(val text: String, val action: String? = null, val onAction: (() -> Unit)? = null)
 
 /** Um link do lote: vídeo único ou lista de itens. */
 class BatchSource(
@@ -49,7 +61,7 @@ class BatchSource(
     ) = BatchSource(url, info, error, loading, selected, expanded)
 }
 
-/** Um link da galeria, com os arquivos listados (quando o usuário abre a prévia). */
+/** Um link de imagens, com os arquivos listados (quando a prévia é aberta). */
 class GalleryLink(
     val url: String,
     val files: List<GalleryFile> = emptyList(),
@@ -66,30 +78,103 @@ class GalleryLink(
     ) = GalleryLink(url, files, selected, loading, error, loaded, end, expanded)
 }
 
+/** Sites onde um link costuma ser de fotos: quando o vídeo falha neles, o app oferece baixar como imagens. */
+private val imageSites = Regex(
+    "instagram\\.com|pinterest\\.|pin\\.it|x\\.com|twitter\\.com|tumblr\\.com|deviantart\\.com|pixiv\\.net|flickr\\.com|" +
+        "artstation\\.com|imgur\\.com|reddit\\.com|redd\\.it|bsky\\.app|threads\\.net|facebook\\.com|danbooru|kemono",
+    RegexOption.IGNORE_CASE,
+)
+
+/** Links que só podem ser vídeo ou áudio: vão para o yt-dlp mesmo com "Imagens" escolhido. */
+private val videoOnly = Regex(
+    "youtube\\.com|youtu\\.be|tiktok\\.com|vimeo\\.com|twitch\\.tv|soundcloud\\.com|dailymotion\\.com|bandcamp\\.com|kwai|" +
+        "\\.(mp4|mkv|webm|mov|m4v|avi|mp3|m4a|aac|ogg|opus|flac|wav)(\\?|$)",
+    RegexOption.IGNORE_CASE,
+)
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx get() = getApplication<SubaruApp>()
     val manager = getApplication<SubaruApp>().manager
     val settings = SettingsStore.state
     val engine = Engine.state
 
-    var tab by mutableStateOf(Tab.HOME)
-    var queueTab by mutableStateOf(QueueTab.ACTIVE)
+    var screen by mutableStateOf(Screen.HOME)
+    var settingsPage by mutableStateOf<String?>(null)
+    var job by mutableStateOf(if (SettingsStore.value.defaultMode == Mode.AUDIO) LinkJob.AUDIO else LinkJob.VIDEO)
 
-    private val _toasts = MutableSharedFlow<String>(extraBufferCapacity = 8)
-    val toasts: SharedFlow<String> = _toasts.asSharedFlow()
+    /** Seção pedida por uma notificação; a tela rola até ela e limpa o pedido. */
+    var focus by mutableStateOf<Section?>(null)
+
+    /** Sobe a cada download novo: a lista volta ao topo para mostrar o cartão que entrou. */
+    var addedTick by mutableIntStateOf(0)
+        private set
+
+    private val _toasts = MutableSharedFlow<Toast>(extraBufferCapacity = 8)
+    val toasts: SharedFlow<Toast> = _toasts.asSharedFlow()
     fun toast(msg: String) {
-        _toasts.tryEmit(msg)
+        _toasts.tryEmit(Toast(msg))
+    }
+
+    /** Tira da lista com "Desfazer" no aviso; os arquivos ficam no celular. */
+    fun clearSection(statuses: Set<Status>, message: String) {
+        val removed = manager.items.value.filter { it.status in statuses }
+        if (removed.isEmpty()) return
+        manager.clearFinished(statuses)
+        _toasts.tryEmit(Toast(message, "Desfazer") { manager.restore(removed) })
+    }
+
+    fun removeWithUndo(item: QueueItem) {
+        manager.remove(item.id)
+        _toasts.tryEmit(Toast("Tirado da lista", "Desfazer") { manager.restore(listOf(item)) })
+    }
+
+    // ---------- Caminhos de uma falha ----------
+
+    /** O áudio falhou porque o vídeo não tem som: baixa o vídeo, com a pasta padrão de vídeos. */
+    fun retryAsVideo(item: QueueItem) = manager.retryWith(item.id) { withMode(it, Mode.VIDEO) }
+
+    /** Não havia vídeo no link: tira o item e abre as imagens desse link. */
+    fun retryItemAsImages(item: QueueItem) {
+        manager.remove(item.id)
+        job = LinkJob.IMAGES
+        galleryPrepare(item.url)
+    }
+
+    fun retryWithoutTurbo(item: QueueItem) {
+        update { it.copy(turbo = false) }
+        manager.retry(item.id)
+        toast("Turbo desligado nos Ajustes")
     }
 
     fun update(block: (AppSettings) -> AppSettings) = SettingsStore.update(block)
     fun settingsReset() = SettingsStore.reset()
+
+    fun openSettings(page: String? = null) {
+        screen = Screen.SETTINGS
+        settingsPage = page
+    }
 
     private suspend fun awaitEngine() {
         Engine.state.first { it.ready || it.error != null }
         if (Engine.state.value.error != null) throw EngineException("As ferramentas não puderam ser preparadas: ${Engine.state.value.error}")
     }
 
-    // ---------- Início ----------
+    /** Opções de um download novo no modo pedido, com a pasta padrão desse modo. */
+    private fun freshOptions(mode: Mode): DownloadOptions {
+        val s = SettingsStore.value
+        return s.newOptions().copy(mode = mode, destination = if (mode == Mode.AUDIO) s.audioDest else s.videoDest)
+    }
+
+    /** Troca vídeo ↔ áudio levando junto a pasta padrão, se a pasta ainda for a padrão do modo anterior. */
+    fun withMode(o: DownloadOptions, mode: Mode): DownloadOptions {
+        if (o.mode == mode) return o
+        val s = SettingsStore.value
+        val oldDefault = if (o.mode == Mode.AUDIO) s.audioDest else s.videoDest
+        val newDefault = if (mode == Mode.AUDIO) s.audioDest else s.videoDest
+        return o.copy(mode = mode, formatId = null, destination = if (o.destination == oldDefault) newDefault else o.destination)
+    }
+
+    // ---------- Um link ----------
 
     var homeUrl by mutableStateOf("")
     var homeLoading by mutableStateOf(false)
@@ -100,19 +185,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var homeOptions by mutableStateOf(DownloadOptions())
     private var homeJob: Job? = null
 
-    /** Lê o link. Vários links de uma vez vão para a aba Playlists (lote). */
-    fun analyze(raw: String) {
+    /** O que a pessoa colou ou compartilhou: decide entre um link, vários (lote) ou imagens. */
+    fun submit(raw: String) {
         val links = extractLinks(raw)
         if (links.isEmpty()) {
-            homeError = "Cole um link que comece com http"
+            homeError = "Isso não parece um link. Copie o endereço que começa com http."
+            homeHint = null
             return
         }
-        if (links.size > 1) {
-            tab = Tab.PLAYLISTS
-            analyzeBatch(links.joinToString("\n"))
-            return
+        // Com "Imagens", um link que só pode ser vídeo (YouTube, arquivo .mp4…) vai para o vídeo e a escolha acompanha
+        if (job == LinkJob.IMAGES && links.all { videoOnly.containsMatchIn(it) }) job = LinkJob.VIDEO
+        when {
+            job == LinkJob.IMAGES -> galleryPrepare(links.joinToString("\n"))
+            links.size > 1 -> analyzeBatch(links.joinToString("\n"))
+            else -> analyze(links.first())
         }
-        val url = links.first()
+    }
+
+    fun analyze(url: String) {
         homeUrl = url
         homeError = null
         homeHint = null
@@ -126,8 +216,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.Main) {
                     homeInfo = info
                     homeInfoUrl = url
-                    homeOptions = SettingsStore.value.newOptions().let { o ->
-                        // Playlist/canal: a lista para escolher os vídeos já vem aberta, com tudo marcado
+                    homeOptions = freshOptions(if (job == LinkJob.AUDIO) Mode.AUDIO else Mode.VIDEO).let { o ->
+                        // Playlist/canal: todos os itens marcados e uma pasta com o nome da lista
                         if (info.isPlaylist) o.copy(playlistItems = "", subfolder = if (o.subfolder == "none") "playlist" else o.subfolder) else o
                     }
                 }
@@ -135,11 +225,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 homeError = e.message
                 homeHint = e.hint
             } catch (e: Exception) {
-                if (e !is CancellationException) homeError = e.message ?: "Falha ao ler o link"
+                if (e !is CancellationException) homeError = e.message ?: "Não consegui ler esse link"
             } finally {
                 homeLoading = false
             }
         }
+    }
+
+    /** O link falhou como vídeo num site de fotos: dá para tentar pelas imagens. */
+    val canTryImages get() = homeError != null && imageSites.containsMatchIn(homeUrl)
+
+    fun retryAsImages() {
+        val url = homeUrl
+        clearHome()
+        job = LinkJob.IMAGES
+        galleryPrepare(url)
     }
 
     fun clearHome() {
@@ -160,14 +260,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         manager.addVideo(info, homeInfoUrl, homeOptions, start)
         toast(if (start) "Download iniciado" else "Adicionado à fila")
         clearHome()
+        addedTick++
     }
 
-    // ---------- Playlists (lote) ----------
+    // ---------- Vários links (lote) ----------
 
-    var batchText by mutableStateOf("")
     var batchLoading by mutableStateOf(false)
     var batchSources by mutableStateOf<List<BatchSource>>(emptyList())
-    var batchOptions by mutableStateOf(DownloadOptions(mode = Mode.AUDIO))
+    var batchOptions by mutableStateOf(DownloadOptions())
     var batchFolderByPlaylist by mutableStateOf(true)
     var batchNumbering by mutableStateOf(true)
     var batchCovers by mutableStateOf(true)
@@ -175,14 +275,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun analyzeBatch(raw: String) {
         val links = extractLinks(raw)
-        if (links.isEmpty()) {
-            toast("Cole um ou mais links")
-            return
-        }
-        batchText = links.joinToString("\n")
-        val base = SettingsStore.value.newOptions()
-        batchOptions = if (batchOptions.mode == Mode.AUDIO) base.copy(mode = Mode.AUDIO, audioFormat = batchOptions.audioFormat, audioBitrate = batchOptions.audioBitrate, destination = batchOptions.destination)
-        else base.copy(mode = batchOptions.mode, quality = batchOptions.quality, destination = batchOptions.destination)
+        if (links.isEmpty()) return
+        homeError = null
+        batchOptions = freshOptions(if (job == LinkJob.AUDIO) Mode.AUDIO else Mode.VIDEO)
         batchSources = links.map { BatchSource(it, loading = true) }
         batchLoading = true
         batchJob?.cancel()
@@ -195,7 +290,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         batchSources = batchSources.mapIndexed { j, s ->
                             if (j != i) s else result.fold(
                                 { info -> s.copy(info = info, loading = false, error = null, selected = if (info.isPlaylist) info.entries.map { it.index }.toSet() else setOf(1), expanded = links.size == 1) },
-                                { e -> s.copy(loading = false, error = (e as? EngineException)?.message ?: e.message ?: "Falha ao ler o link") },
+                                { e -> s.copy(loading = false, error = (e as? EngineException)?.let { x -> x.hint ?: x.message } ?: e.message ?: "Não consegui ler esse link") },
                             )
                         }
                     }
@@ -219,7 +314,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun clearBatch() {
         batchJob?.cancel()
         batchSources = emptyList()
-        batchText = ""
         batchLoading = false
     }
 
@@ -242,27 +336,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             count++
         }
         if (count > 0) {
-            toast("$count ${if (count == 1) "lista" else "listas"} na fila")
+            toast(if (count == 1) "1 link na fila" else "$count links na fila")
             clearBatch()
-            tab = Tab.QUEUE
+            addedTick++
         } else toast("Marque pelo menos um item")
     }
 
-    // ---------- Galeria ----------
+    // ---------- Imagens (gallery-dl) ----------
 
-    var galText by mutableStateOf("")
     var galLinks by mutableStateOf<List<GalleryLink>>(emptyList())
     var galOptions by mutableStateOf(GalleryOptions())
 
-    /** Mostra os links como lista; com um só, a prévia já abre. */
+    /** Mostra os links; com um só, a prévia já abre. */
     fun galleryPrepare(raw: String) {
         val links = extractLinks(raw)
-        if (links.isEmpty()) {
-            toast("Cole um link de perfil, post ou álbum")
-            return
-        }
+        if (links.isEmpty()) return
+        homeError = null
+        val s = SettingsStore.value
+        galOptions = GalleryOptions(organize = s.galleryOrganize, customFormat = s.galleryCustom)
         galLinks = links.map { GalleryLink(it) }
-        galText = ""
         if (links.size == 1) galleryLoad(0, false)
     }
 
@@ -286,7 +378,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         l.copy(
                             files = all, loading = false, loaded = true, end = listing.end,
                             selected = if (firstTime || !more) all.map { it.index }.toSet() else l.selected + listing.files.map { it.index },
-                            error = if (all.isEmpty()) "Nenhum arquivo encontrado nesse link." else null,
+                            error = if (all.isEmpty()) emptyGalleryMessage(link.url) else null,
                         )
                     }
                 }
@@ -300,57 +392,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Nada listado: em sites que escondem as fotos de quem não entrou na conta, diz o caminho. */
+    private fun emptyGalleryMessage(url: String): String =
+        if (Regex("instagram\\.com|facebook\\.com|x\\.com|twitter\\.com|threads\\.net|pixiv\\.net", RegexOption.IGNORE_CASE).containsMatchIn(url))
+            "Não achei fotos. Esse site costuma mostrar as fotos só para quem entrou na conta: entre em Ajustes → Contas e cookies."
+        else "Não achei fotos nesse link."
+
+    /** O link não é de fotos: tenta como vídeo. */
+    fun retryAsVideo(url: String) {
+        galLinks = emptyList()
+        job = LinkJob.VIDEO
+        analyze(url)
+    }
+
+    /** Quantos links vão para a fila: os não abertos baixam tudo; os abertos, só o que estiver marcado. */
+    fun galleryCount() = galLinks.count { !it.loaded || it.selected.isNotEmpty() }
+
     fun galleryDownload() {
         var n = 0
         for (l in galLinks) {
             if (l.loaded && l.selected.isEmpty()) continue
             val range = if (l.loaded && l.selected.size != l.files.size) compactRanges(l.selected) else ""
-            manager.addGallery(l.url, galleryOptionsNow().copy(range = range))
+            manager.addGallery(l.url, galOptions.copy(range = range))
             n++
         }
         if (n > 0) {
-            toast("$n ${if (n == 1) "link" else "links"} na fila")
+            toast(if (n == 1) "1 link na fila" else "$n links na fila")
             galLinks = emptyList()
-            tab = Tab.QUEUE
+            addedTick++
         } else toast("Marque pelo menos um arquivo")
     }
-
-    fun galleryDownloadText(raw: String) {
-        val links = extractLinks(raw)
-        if (links.isEmpty()) {
-            toast("Cole um link de perfil, post ou álbum")
-            return
-        }
-        links.forEach { manager.addGallery(it, galleryOptionsNow()) }
-        galText = ""
-        toast("${links.size} ${if (links.size == 1) "link" else "links"} na fila")
-        tab = Tab.QUEUE
-    }
-
-    /** As opções da tela, completadas com o padrão das configurações. */
-    private fun galleryOptionsNow(): GalleryOptions = galOptions
 
     // ---------- Entrada de fora (Compartilhar, área de transferência) ----------
 
     private var lastIncoming = ""
 
+    /** O mesmo link copiado só é lido sozinho uma vez. */
+    private var lastClipboard = ""
+
     fun handleIncoming(text: String, fromClipboard: Boolean = false) {
         val links = extractLinks(text)
         if (links.isEmpty()) return
         val key = links.joinToString("\n")
-        if (fromClipboard && key == lastIncoming) return
+        if (fromClipboard && (key == lastIncoming || key == lastClipboard)) return
+        // O link copiado nunca atropela um link que já está sendo lido ou uma folha aberta
+        if (fromClipboard && (homeLoading || homeInfo != null || batchSources.isNotEmpty() || galLinks.isNotEmpty())) return
+        if (fromClipboard) lastClipboard = key
         lastIncoming = key
-        if (links.size > 1) {
-            tab = Tab.PLAYLISTS
-            analyzeBatch(key)
-        } else {
-            tab = Tab.HOME
-            analyze(links.first())
-        }
-    }
-
-    init {
-        val s = SettingsStore.value
-        galOptions = GalleryOptions(organize = s.galleryOrganize, customFormat = s.galleryCustom)
+        screen = Screen.HOME
+        settingsPage = null
+        submit(key)
     }
 }

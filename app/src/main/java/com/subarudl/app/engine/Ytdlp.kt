@@ -21,10 +21,13 @@ fun errorHint(raw: String): String? = when {
     Regex("Sign in to confirm|confirm you.re not a bot|age.restricted|login required", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O site pediu login. Entre na sua conta em Ajustes → Contas e cookies."
     Regex("Private video|members.only|Join this channel", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Vídeo privado ou só para membros. Entre na conta que tem acesso em Ajustes → Contas e cookies."
     Regex("Video unavailable|not available|has been removed|removed by", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O vídeo não está disponível (removido, bloqueado na região ou privado)."
-    Regex("aria2c exited with code", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O Turbo (aria2) falhou. Desligue o Turbo Boost em Ajustes e tente de novo."
+    Regex("HTTP Error 404|404: Not Found", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O link não existe mais ou está incompleto (erro 404). Confira o endereço."
+    Regex("No video formats found|There is no video in this|No media found", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Não achei vídeo nesse link. Se for um post de fotos, escolha Imagens e cole de novo."
+    Regex("unable to obtain file audio codec|does not contain any stream|no audio stream", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Esse vídeo não tem som, então não dá para tirar o áudio. Baixe como Vídeo."
+    Regex("aria2c exited with code", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "O Turbo (aria2) falhou. Desligue o Turbo em Ajustes e tente de novo."
     Regex("No space left|ENOSPC", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Acabou o espaço no aparelho."
     Regex("Unsupported URL", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Esse link não é suportado."
-    Regex("Requested format is not available", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "A qualidade pedida não existe nesse vídeo. Tente \"Melhor disponível\"."
+    Regex("Requested format is not available", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "A qualidade pedida não existe nesse vídeo. Escolha outra qualidade."
     Regex("Unable to resolve|Name or service not known|Network is unreachable|timed out|Connection reset", RegexOption.IGNORE_CASE).containsMatchIn(raw) -> "Sem conexão com a internet ou o site não respondeu."
     else -> null
 }
@@ -33,7 +36,9 @@ fun cleanError(raw: String): String {
     val line = raw.lines().map { it.trim() }.lastOrNull { it.startsWith("ERROR") }
         ?: raw.lines().map { it.trim() }.lastOrNull { it.isNotEmpty() && !it.startsWith("[debug]") && !it.startsWith("WARNING") }
         ?: "Falha desconhecida"
-    return line.removePrefix("ERROR:").trim().replace(Regex("^\\[[^]]+]\\s*[\\w-]+:\\s*"), "").take(400)
+    return line.removePrefix("ERROR:").trim().replace(Regex("^\\[[^]]+]\\s*[\\w-]+:\\s*"), "")
+        // As dicas do yt-dlp em inglês ("See https://github.com/…") não ajudam quem usa o app
+        .substringBefore(" See  https://").substringBefore(" See https://").substringBefore(" Also see https://").trim().take(400)
 }
 
 object Ytdlp {

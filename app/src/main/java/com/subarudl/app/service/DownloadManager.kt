@@ -245,6 +245,18 @@ class DownloadManager(private val app: Application) {
         saveSoon()
     }
 
+    /** Desfazer: põe de volta itens tirados da lista (os arquivos nunca saíram do celular). */
+    fun restore(back: List<QueueItem>) {
+        _items.update { l -> l + back.filter { b -> l.none { it.id == b.id } } }
+        saveSoon()
+    }
+
+    /** Tenta de novo com outras opções (ex.: o áudio falhou porque o vídeo não tem som, então baixa como vídeo). */
+    fun retryWith(id: String, change: (DownloadOptions) -> DownloadOptions) {
+        mutate(id) { x -> x.copy(options = change(x.options)) }
+        retry(id)
+    }
+
     fun clearQueue() {
         _items.value.filter { it.status != Status.DONE && it.status != Status.ERROR }.forEach { remove(it.id) }
     }

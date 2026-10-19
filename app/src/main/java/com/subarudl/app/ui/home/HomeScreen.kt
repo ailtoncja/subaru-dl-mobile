@@ -1,408 +1,405 @@
 package com.subarudl.app.ui.home
 
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.PlayCircleOutline
-import androidx.compose.material.icons.outlined.PlaylistAdd
-import androidx.compose.material.icons.outlined.Tag
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.Verified
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.ViewList
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WifiOff
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.subarudl.app.LinkJob
 import com.subarudl.app.MainViewModel
-import com.subarudl.app.QueueTab
-import com.subarudl.app.Tab
-import com.subarudl.app.data.DownloadOptions
-import com.subarudl.app.data.MediaInfo
-import com.subarudl.app.data.Mode
-import com.subarudl.app.data.Status
-import com.subarudl.app.ui.components.Badge
-import com.subarudl.app.ui.components.BtnGhost
-import com.subarudl.app.ui.components.BtnPrimary
-import com.subarudl.app.ui.components.CheckSubaru
-import com.subarudl.app.ui.components.DarkBadge
-import com.subarudl.app.ui.components.DropField
-import com.subarudl.app.ui.components.HRow
-import com.subarudl.app.ui.components.LinkField
-import com.subarudl.app.ui.components.ScreenTitle
-import com.subarudl.app.ui.components.IconTile
-import com.subarudl.app.ui.components.textFieldColors
-import com.subarudl.app.ui.components.IconBtn
-import com.subarudl.app.ui.components.Mono
-import com.subarudl.app.ui.components.ProgressTrack
-import com.subarudl.app.ui.components.SCard
-import com.subarudl.app.ui.components.SectionLabel
-import com.subarudl.app.ui.components.Seg
-import com.subarudl.app.ui.components.Segmented
-import com.subarudl.app.ui.components.SiteChip
-import com.subarudl.app.ui.components.Thumb
-import com.subarudl.app.ui.theme.C
-import com.subarudl.app.ui.theme.Manrope
-import com.subarudl.app.ui.theme.T
-import com.subarudl.app.util.audioBitrateOptions
-import com.subarudl.app.util.audioFormats
-import com.subarudl.app.util.expandSelection
-import com.subarudl.app.util.formatCount
-import com.subarudl.app.util.formatDuration
-import com.subarudl.app.util.formatEta
-import com.subarudl.app.util.formatSpeed
-import com.subarudl.app.util.selectionSpec
-import com.subarudl.app.util.tierLabel
-import com.subarudl.app.util.videoContainers
-import com.subarudl.app.util.videoQualityOptions
+import com.subarudl.app.R
+import com.subarudl.app.Section
+import com.subarudl.app.ui.components.Gutter
+import com.subarudl.app.ui.components.sideFor
+import com.subarudl.app.util.extractLinks
 
-@Composable
-fun HomeScreen(vm: MainViewModel) {
-    val settings by vm.settings.collectAsState()
-    val items by vm.manager.items.collectAsState()
-    val net by vm.manager.net.collectAsState()
-    val engine by vm.engine.collectAsState()
-    var showAdvanced by remember { mutableStateOf(false) }
-    var showList by rememberSaveable { mutableStateOf(true) }
-    val clipboard = LocalClipboardManager.current
-
-    val info = vm.homeInfo
-    val o = vm.homeOptions
-    val active = items.filter { it.active }
-    val speed = active.sumOf { it.speed }
-
-    // Quando o link é lido, a tela rola sozinha até a prévia
-    val listState = rememberLazyListState()
-    LaunchedEffect(info?.id) { if (info != null) listState.animateScrollToItem(2) }
-
-    LazyColumn(
-        Modifier.fillMaxWidth(),
-        state = listState,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        // ---- Título e estado ----
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ScreenTitle("Central de Downloads", "Cole o link de um vídeo, música ou perfil e baixe em alta qualidade.")
-                HRow(gap = 8.dp) {
-                    StatusChip(
-                        if (net.online) "Online • ${net.label}" else "Offline", if (net.online) C.CyanPale else C.ErrorStrong,
-                    )
-                    StatusChip("↓ ${formatSpeed(speed)}", C.Text)
-                    StatusChip(if (settings.turbo) "Turbo aria2" else "yt-dlp ${engine.ytdlp ?: "…"}", C.Gold)
-                }
-            }
-        }
-
-        // ---- Cartão do link ----
-        item {
-            SCard(padding = 16.dp) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconTile(Icons.Outlined.Bolt, size = 36.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Link do vídeo ou áudio", style = T.title)
-                        Text("Detecção rápida em mais de 1.800 sites", style = T.labelMd)
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
-                LinkField(vm.homeUrl, { vm.homeUrl = it }, "https://youtu.be/…", onClear = { vm.clearHome() }, onGo = { vm.analyze(vm.homeUrl) })
-                Spacer(Modifier.height(12.dp))
-                if (vm.homeLoading || (!engine.ready && engine.error == null)) {
-                    Row(Modifier.fillMaxWidth().height(52.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(22.dp), color = C.Gold, strokeWidth = 2.5.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text(if (vm.homeLoading) "Lendo o link…" else "Preparando as ferramentas (só na primeira vez)…", style = T.labelLg, color = C.Muted)
-                    }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BtnGhost("Colar", {
-                            val text = clipboard.getText()?.text.orEmpty()
-                            if (text.contains("http")) vm.analyze(text) else vm.toast("Nenhum link na área de transferência")
-                        }, Modifier.weight(0.8f), icon = Icons.Outlined.ContentPaste, height = 52.dp)
-                        BtnPrimary("Capturar mídia", { vm.analyze(vm.homeUrl) }, Modifier.weight(1.4f), icon = Icons.Outlined.Download, enabled = vm.homeUrl.isNotBlank())
-                    }
-                }
-                if (engine.error != null) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("Erro ao preparar as ferramentas: ${engine.error}", style = T.bodySm, color = C.Error)
-                }
-                vm.homeError?.let {
-                    Spacer(Modifier.height(12.dp))
-                    Text(it, style = T.bodyMd, color = C.Error)
-                    vm.homeHint?.let { h -> Text(h, style = T.bodySm, color = C.Muted, modifier = Modifier.padding(top = 4.dp)) }
-                }
-                Spacer(Modifier.height(16.dp))
-                SectionLabel("Canais compatíveis")
-                Spacer(Modifier.height(8.dp))
-                HRow(gap = 8.dp) {
-                    SiteChip("YouTube", Icons.Outlined.PlayCircleOutline, C.ErrorStrong)
-                    SiteChip("TikTok", Icons.Outlined.MusicNote, C.CyanPale)
-                    SiteChip("Instagram", Icons.Outlined.CameraAlt, C.Muted)
-                    SiteChip("X", Icons.Outlined.Tag)
-                    SiteChip("SoundCloud", Icons.Outlined.Headphones)
-                    SiteChip("+1.800 sites", Icons.Outlined.Videocam)
-                }
-            }
-        }
-
-        // ---- Mídia identificada ----
-        if (info != null) {
-            item { MediaCard(vm, info, o) }
-            if (info.isPlaylist) {
-                val total = info.entries.size
-                val selected = expandSelection(o.playlistItems, total)
-                item {
-                    SCard(padding = 16.dp) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.ViewList, null, Modifier.size(20.dp), tint = C.BluePale)
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Vídeos da playlist", style = T.title)
-                                Mono("${selected.size} de $total marcados", color = C.Muted, style = T.labelMd)
-                            }
-                            Text(if (showList) "Esconder" else "Mostrar", Modifier.clickable { showList = !showList }.padding(6.dp), style = T.labelMd, color = C.Gold)
-                        }
-                        if (showList) {
-                            Spacer(Modifier.height(10.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                BtnGhost("Marcar todos", { vm.homeOptions = o.copy(playlistItems = "") }, Modifier.weight(1f), height = 40.dp)
-                                BtnGhost("Desmarcar", { vm.homeOptions = o.copy(playlistItems = "0") }, Modifier.weight(1f), height = 40.dp)
-                            }
-                        }
-                    }
-                }
-                if (showList) {
-                    items(info.entries, key = { it.index }) { e ->
-                        val on = e.index in selected
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.Card).border(1.dp, if (on) Color(0x4DFACC15) else C.Border, RoundedCornerShape(10.dp))
-                                .clickable {
-                                    val next = if (on) selected - e.index else selected + e.index
-                                    vm.homeOptions = o.copy(playlistItems = selectionSpec(next, total))
-                                }.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CheckSubaru(on, { v ->
-                                val next = if (v) selected + e.index else selected - e.index
-                                vm.homeOptions = o.copy(playlistItems = selectionSpec(next, total))
-                            })
-                            Spacer(Modifier.width(10.dp))
-                            Thumb(e.thumb, Modifier.width(84.dp).aspectRatio(16f / 9f))
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(e.title, style = T.bodyMd.copy(fontSize = 14.sp, lineHeight = 18.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Mono(listOfNotNull(e.index.toString().padStart(2, '0'), e.channel, e.duration?.let { formatDuration(it) }).joinToString(" • "), color = C.Muted)
-                            }
-                        }
-                    }
-                }
-            }
-            item { ActionCard(vm, o, onAdvanced = { showAdvanced = true }) }
-        }
-
-        // ---- Baixando agora ----
-        if (active.isNotEmpty()) {
-            item {
-                val first = active.first()
-                SCard(padding = 16.dp) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Download, null, Modifier.size(18.dp), tint = C.Gold)
-                        Spacer(Modifier.width(8.dp))
-                        SectionLabel("Baixando agora", Modifier.weight(1f), color = C.Gold)
-                        Mono("${(first.progress * 100).toInt()}%", color = C.Text, style = T.labelLg)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Thumb(first.thumb, Modifier.size(56.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(first.title, style = T.title.copy(fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Row {
-                                Mono(formatSpeed(first.speed), color = C.CyanPale, style = T.labelMd)
-                                Spacer(Modifier.width(12.dp))
-                                Mono(first.stage.ifEmpty { formatEta(first.eta) + " restantes" }, color = C.Muted, style = T.labelMd)
-                            }
-                        }
-                        IconBtn(Icons.Outlined.Pause, { vm.manager.pause(first.id) }, size = 40.dp)
-                        Spacer(Modifier.width(8.dp))
-                        IconBtn(Icons.Filled.Close, { vm.manager.cancel(first.id) }, size = 40.dp)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    ProgressTrack(first.progress)
-                }
-            }
-        }
-        if (items.any { it.status == Status.WAITING || it.active }) {
-            item {
-                val n = items.count { it.status == Status.WAITING || it.active }
-                Row(
-                    Modifier.fillMaxWidth().clickable { vm.tab = Tab.QUEUE; vm.queueTab = QueueTab.ACTIVE }.padding(8.dp),
-                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Mono("Ver todos os $n downloads ativos na Fila", color = C.Text, style = T.labelMd)
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Outlined.ArrowForward, null, Modifier.size(16.dp), tint = C.Text)
-                }
-            }
-        }
-    }
-
-    if (showAdvanced && info != null) {
-        AdvancedSheet(info, o, info.isPlaylist, { vm.homeOptions = it }, { showAdvanced = false })
-    }
+/** Texto da área de transferência (só dá para ler com o app na frente). */
+fun readClipboard(ctx: Context): String {
+    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    return cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
 }
 
+/** A tela principal: colar ou compartilhar o link e acompanhar os downloads no mesmo lugar. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MediaCard(vm: MainViewModel, info: MediaInfo, o: DownloadOptions) {
+fun HomeScreen(vm: MainViewModel, snackbar: SnackbarHostState) {
     val ctx = LocalContext.current
-    val set = { n: DownloadOptions -> vm.homeOptions = n }
-    SCard(padding = 16.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Verified, null, Modifier.size(20.dp), tint = C.Gold)
-            Spacer(Modifier.width(8.dp))
-            SectionLabel("Mídia identificada", Modifier.weight(1f), color = C.Gold)
-            Mono(if (info.isPlaylist) "${info.site} • playlist" else "Pronta para conversão", color = C.Muted, style = T.labelMd)
-        }
-        Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)).background(C.CardHighest)) {
-            Thumb(info.thumb, Modifier.fillMaxWidth().aspectRatio(16f / 9f), shape = RoundedCornerShape(10.dp))
-            Row(Modifier.align(Alignment.TopStart).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val best = info.maxHeight
-                if (best > 0) DarkBadge(tierLabel(best))
-                info.formats.filter { it.hasVideo }.maxByOrNull { it.fps ?: 0.0 }?.fps?.takeIf { it >= 50 }?.let { DarkBadge("${it.toInt()} FPS", C.Text) }
-                if (info.isLive) DarkBadge("AO VIVO", C.ErrorStrong)
+    val items by vm.manager.items.collectAsState()
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var details by rememberSaveable { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val groups = remember(items, query) { Groups(items, query) }
+    val fabExpanded = listState.isScrollingUp()
+
+    val paste: () -> Unit = {
+        val text = readClipboard(ctx)
+        if (extractLinks(text).isNotEmpty()) vm.submit(text)
+        else vm.toast("Nenhum link copiado. No app do vídeo, toque em Compartilhar e depois em Copiar link.")
+    }
+
+    BackHandler(enabled = searching) { searching = false; query = "" }
+    LaunchedEffect(vm.addedTick) { if (vm.addedTick > 0) listState.animateScrollToItem(0) }
+    LaunchedEffect(vm.focus) {
+        val f = vm.focus ?: return@LaunchedEffect
+        vm.focus = null
+        headerIndex(groups, f)?.let { listState.animateScrollToItem(it) }
+    }
+
+    // Em tablet o conteúdo fica numa coluna central e a barra de cima alinha com ela; a rolagem vale na tela toda
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val side = sideFor(maxWidth)
+        val barInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = side, right = side))
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                if (searching) SearchBar(query, { query = it }, onClose = { searching = false; query = "" }, barInsets)
+                else TopAppBar(
+                    title = { Text("Subaru DL") },
+                    windowInsets = barInsets,
+                    actions = {
+                        if (items.isNotEmpty()) IconButton({ searching = true }) { Icon(Icons.Outlined.Search, "Buscar nos downloads") }
+                        IconButton({ vm.openSettings() }) { Icon(Icons.Outlined.Settings, "Ajustes") }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    text = { Text("Colar link") },
+                    icon = { Icon(Icons.Outlined.ContentPaste, null) },
+                    onClick = paste,
+                    expanded = fabExpanded,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbar) },
+        ) { padding ->
+            LazyColumn(
+                Modifier.fillMaxSize().imePadding(),
+                state = listState,
+                contentPadding = PaddingValues(start = side, end = side, top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 88.dp),
+            ) {
+                if (!searching) item(key = "bar") { LinkBar(vm, paste) }
+                if (groups.isEmpty) item(key = "empty") { if (query.isBlank()) EmptyState() else NoResults(query) }
+                else {
+                    downloadSections(vm, groups, actions = !searching, onDetails = { details = it }, onOpen = { it.outputs.firstOrNull()?.let { f -> openFile(ctx, vm, f) } ?: run { details = it.id } })
+                    if (!searching) item(key = "storage") { StorageLine(items) }
+                }
             }
-            Box(
-                Modifier.align(Alignment.Center).size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xCC1D4ED8))
-                    .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl.ifEmpty { vm.homeInfoUrl })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.PlayArrow, "Ver no site", Modifier.size(32.dp), tint = Color.White) }
-            if (info.duration != null) DarkBadge(formatDuration(info.duration), C.Text, Modifier.align(Alignment.BottomEnd).padding(10.dp))
         }
-        Spacer(Modifier.height(14.dp))
-        Text(info.title, style = T.headlineMd.copy(fontSize = 22.sp, lineHeight = 28.sp), maxLines = 3, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Videocam, null, Modifier.size(16.dp), tint = C.BluePale)
-            Spacer(Modifier.width(6.dp))
-            Text(
-                listOfNotNull(info.channel, info.views?.let { formatCount(it) + " views" }).joinToString("  •  "),
-                style = T.bodySm.copy(fontSize = 14.sp), color = C.BluePale, maxLines = 1, overflow = TextOverflow.Ellipsis,
+    }
+
+    details?.let { id -> ItemSheet(vm, id) { details = null } }
+    vm.homeInfo?.let { VideoSheet(vm, it) }
+    if (vm.batchSources.isNotEmpty()) BatchSheet(vm)
+    if (vm.galLinks.isNotEmpty()) GallerySheet(vm)
+}
+
+/** A lista está subindo ou parada: o botão "Colar link" mostra o texto, como no Arquivos e no Seal; descendo, vira só o ícone. */
+@Composable
+private fun LazyListState.isScrollingUp(): Boolean {
+    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
+    var previousOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
+    return remember(this) {
+        derivedStateOf {
+            (if (previousIndex != firstVisibleItemIndex) previousIndex > firstVisibleItemIndex else previousOffset >= firstVisibleItemScrollOffset).also {
+                previousIndex = firstVisibleItemIndex
+                previousOffset = firstVisibleItemScrollOffset
+            }
+        }
+    }.value
+}
+
+/** Posição do título de uma seção na lista (o campo de link é o item 0). */
+private fun headerIndex(g: Groups, s: Section): Int? {
+    var i = 1
+    if (g.running.isNotEmpty()) { if (s == Section.ACTIVE) return i; i += 1 + g.running.size }
+    if (g.waiting.isNotEmpty()) { if (s == Section.ACTIVE) return i; i += 1 + g.waiting.size }
+    if (g.failed.isNotEmpty()) { if (s == Section.FAILED) return i; i += 1 + g.failed.size }
+    if (g.done.isNotEmpty() && s == Section.DONE) return i
+    return null
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchBar(query: String, onQuery: (String) -> Unit, onClose: () -> Unit, insets: WindowInsets) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    TopAppBar(
+        navigationIcon = { IconButton(onClose) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Fechar a busca") } },
+        title = {
+            TextField(
+                query, onQuery, Modifier.fillMaxWidth().focusRequester(focus), singleLine = true,
+                placeholder = { Text("Buscar nos downloads") },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            )
+        },
+        actions = { if (query.isNotEmpty()) IconButton({ onQuery("") }) { Icon(Icons.Outlined.Close, "Limpar a busca") } },
+        windowInsets = insets,
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    )
+}
+
+/** Campo do link, a escolha Vídeo/Áudio/Imagens e o que está acontecendo com o link colado. */
+@Composable
+private fun LinkBar(vm: MainViewModel, onPaste: () -> Unit) {
+    val engine by vm.engine.collectAsState()
+    val net by vm.manager.net.collectAsState()
+    val settings by vm.settings.collectAsState()
+    Column(Modifier.padding(horizontal = Gutter).padding(top = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LinkField(vm, onPaste)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LinkJob.entries.forEach { j ->
+                val on = vm.job == j
+                FilterChip(
+                    selected = on, onClick = { vm.job = j }, label = { Text(j.label) },
+                    leadingIcon = if (on) ({ Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }) else null,
+                )
+            }
+        }
+        when {
+            engine.error != null -> Notice(Icons.Outlined.ErrorOutline, "As ferramentas não puderam ser preparadas", engine.error, error = true)
+            !engine.ready -> Working("Preparando as ferramentas (só na primeira vez)…")
+            vm.homeLoading -> Working("Lendo o link…")
+            vm.batchLoading && vm.batchSources.isEmpty() -> Working("Lendo os links…")
+        }
+        vm.homeError?.let { msg ->
+            val hint = vm.homeHint
+            val login = needsLogin(hint)
+            Notice(
+                Icons.Outlined.ErrorOutline,
+                when {
+                    login -> "${siteSubject(vm.homeUrl) ?: "O site"} pediu login para este link."
+                    hint != null -> hint
+                    else -> "Não consegui ler esse link"
+                },
+                body = if (hint == null) msg else null,
+                error = true,
+                detail = if (hint != null) msg else null,
+                actions = buildList {
+                    if (login) add("Entrar na conta" to { vm.openSettings("contas") })
+                    if (vm.canTryImages) add("Baixar como imagens" to { vm.retryAsImages() })
+                    if (vm.homeUrl.isNotBlank()) add("Tentar de novo" to { vm.analyze(vm.homeUrl) })
+                },
             )
         }
-        Spacer(Modifier.height(14.dp))
+        if (!net.online) Notice(Icons.Outlined.WifiOff, "Sem internet", "Os downloads continuam sozinhos quando a conexão voltar.")
+        else if (settings.wifiOnly && !net.wifi) {
+            Notice(
+                Icons.Outlined.WifiOff, "Esperando o Wi-Fi", "\"Só no Wi-Fi\" está ligado nos Ajustes; os downloads começam quando houver Wi-Fi.",
+                actions = listOf("Usar os dados móveis" to { vm.update { it.copy(wifiOnly = false) } }),
+            )
+        }
+    }
+}
 
-        Segmented(
-            listOf(
-                Seg(Mode.VIDEO, "Vídeo ${o.container.uppercase()}", Icons.Outlined.Videocam),
-                Seg(Mode.AUDIO, "Áudio ${o.audioFormat.uppercase()}", Icons.Outlined.Headphones),
-            ),
-            o.mode, { set(o.copy(mode = it, formatId = null)) },
-        )
-        Spacer(Modifier.height(14.dp))
-        SectionLabel(if (o.mode == Mode.VIDEO) "Resolução & taxa de bits" else "Qualidade do áudio")
+@Composable
+private fun LinkField(vm: MainViewModel, onPaste: () -> Unit) {
+    val focusManager = LocalFocusManager.current
+    val scheme = MaterialTheme.colorScheme
+    val value = vm.homeUrl
+    TextField(
+        value = value,
+        onValueChange = { new ->
+            // Colou pelo teclado: lê o link na hora, sem precisar de outro toque
+            val pasted = new.length - value.length > 8 && extractLinks(new).isNotEmpty()
+            vm.homeUrl = new
+            if (vm.homeError != null) { vm.homeError = null; vm.homeHint = null }
+            if (pasted) { vm.submit(new); focusManager.clearFocus() }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Cole ou compartilhe um link") },
+        leadingIcon = { Icon(Icons.Outlined.Link, null) },
+        trailingIcon = {
+            when {
+                value.isNotEmpty() -> IconButton({ vm.clearHome() }) { Icon(Icons.Outlined.Close, if (vm.homeLoading) "Parar de ler o link" else "Limpar o link") }
+                else -> IconButton(onPaste) { Icon(Icons.Outlined.ContentPaste, "Colar o link copiado") }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = scheme.surfaceContainerHigh, unfocusedContainerColor = scheme.surfaceContainerHigh,
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
+        ),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+        keyboardActions = KeyboardActions(onGo = { vm.submit(value); focusManager.clearFocus() }),
+    )
+}
+
+@Composable
+private fun Working(text: String) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Aviso no alto da tela: erro do link, falta de internet, espera pelo Wi-Fi. */
+@Composable
+private fun Notice(
+    icon: ImageVector,
+    title: String,
+    body: String?,
+    error: Boolean = false,
+    detail: String? = null,
+    actions: List<Pair<String, () -> Unit>> = emptyList(),
+) {
+    val scheme = MaterialTheme.colorScheme
+    var showDetail by rememberSaveable(detail) { mutableStateOf(false) }
+    Card(colors = CardDefaults.cardColors(containerColor = if (error) scheme.errorContainer else scheme.surfaceContainerHigh)) {
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.Top) {
+            Icon(icon, null, tint = if (error) scheme.onErrorContainer else scheme.onSurfaceVariant)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = if (error) scheme.onErrorContainer else scheme.onSurface)
+                body?.let {
+                    // O detalhe técnico fica curto: o texto inteiro está no Registro
+                    Text(
+                        it, style = if (error) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                        color = if (error) scheme.onErrorContainer else scheme.onSurfaceVariant,
+                        maxLines = if (error) 3 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                // O erro técnico (em inglês, do yt-dlp) só aparece para quem pedir; inteiro, ele está no Registro
+                if (detail != null) {
+                    TextButton(
+                        { showDetail = !showDetail }, Modifier.offset(x = (-12).dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = if (error) scheme.onErrorContainer else scheme.primary),
+                    ) {
+                        Text(if (showDetail) "Esconder o detalhe técnico" else "Ver o detalhe técnico")
+                        Icon(if (showDetail) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, Modifier.size(18.dp))
+                    }
+                    AnimatedVisibility(showDetail) {
+                        Text(
+                            detail, style = MaterialTheme.typography.bodySmall, color = if (error) scheme.onErrorContainer else scheme.onSurfaceVariant,
+                            maxLines = 8, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+        if (actions.isEmpty()) Spacer(Modifier.height(14.dp))
+        else Row(Modifier.fillMaxWidth().padding(start = 44.dp, end = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.End) {
+            // No aviso de erro os botões usam a cor do texto do aviso, não o amarelo
+            val colors = if (error) ButtonDefaults.textButtonColors(contentColor = scheme.onErrorContainer) else ButtonDefaults.textButtonColors()
+            actions.forEach { (label, onClick) -> TextButton(onClick, colors = colors) { Text(label) } }
+        }
+    }
+}
+
+@Composable
+private fun EmptyState() {
+    val scheme = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(painterResource(R.drawable.ic_logo), null, Modifier.size(72.dp))
+        Spacer(Modifier.height(20.dp))
+        Text("Baixe vídeos, músicas e fotos", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        if (o.mode == Mode.VIDEO) {
-            val options = videoQualityOptions(info, o.fps30)
-            DropField(o.quality.takeIf { q -> options.any { it.value == q } } ?: "best", options, { set(o.copy(quality = it, formatId = null)) }, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(10.dp))
-            DropField(o.container, videoContainers, { set(o.copy(container = it)) }, Modifier.fillMaxWidth(), prefix = "Formato: ")
-        } else {
-            val lossless = o.audioFormat == "wav" || o.audioFormat == "flac"
-            val options = audioBitrateOptions(info, lossless)
-            DropField(if (lossless) 0 else o.audioBitrate, options, { set(o.copy(audioBitrate = it)) }, Modifier.fillMaxWidth(), enabled = !lossless)
-            Spacer(Modifier.height(10.dp))
-            DropField(o.audioFormat, audioFormats, { set(o.copy(audioFormat = it)) }, Modifier.fillMaxWidth(), prefix = "Formato: ")
-        }
-        Spacer(Modifier.height(10.dp))
-        AudioTrackSelect(info, o, set)
-        if (info.audioLangs.size > 1) Spacer(Modifier.height(10.dp))
-        if (o.mode == Mode.VIDEO) SubtitleSelect(info, o, set)
+        Text(
+            "Em qualquer app, toque em Compartilhar e escolha Subaru DL. Ou copie o link e toque em Colar link.",
+            style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Funciona com YouTube, Instagram, TikTok, X, Facebook e mais de 1.800 sites.",
+            style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
+        )
     }
 }
 
 @Composable
-private fun ActionCard(vm: MainViewModel, o: DownloadOptions, onAdvanced: () -> Unit) {
-    val set = { n: DownloadOptions -> vm.homeOptions = n }
-    SCard(padding = 16.dp) {
-        DestinationRow(o.destination, o.mode == Mode.AUDIO, { set(o.copy(destination = it)) })
-        Spacer(Modifier.height(12.dp))
-        OrganizeSelect(o.subfolder, o.subfolderCustom, { v, c -> set(o.copy(subfolder = v, subfolderCustom = c)) })
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().clickable(onClick = onAdvanced).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Tune, null, Modifier.size(20.dp), tint = C.Gold)
-            Spacer(Modifier.width(8.dp))
-            Text("Opções avançadas", style = T.labelLg, color = C.Gold)
-        }
-        Spacer(Modifier.height(10.dp))
-        BtnPrimary("Baixar Agora", { vm.downloadHome(true) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Download)
-        Spacer(Modifier.height(10.dp))
-        BtnGhost("Adicionar à fila", { vm.downloadHome(false) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.PlaylistAdd)
-    }
-}
-
-/** Chip de estado (online, velocidade, versão): só informa, não é clicável. */
-@Composable
-private fun StatusChip(text: String, color: Color) {
+private fun NoResults(query: String) {
     Text(
-        text,
-        Modifier.clip(RoundedCornerShape(10.dp)).background(C.Container).border(1.dp, C.Border, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 7.dp),
-        style = T.labelLg.copy(fontSize = 12.5.sp), color = color, maxLines = 1,
+        "Nada encontrado para \"$query\".", Modifier.fillMaxWidth().padding(32.dp),
+        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
     )
 }
