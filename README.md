@@ -5,6 +5,12 @@ Baixador de vídeos, áudios e galerias para Android. É o irmão do [Subaru DL 
 apps do Android (a régua é o Seal e os apps do Google), nas três cores Subaru: azul-marinho, amarelo e dourado.
 Desde a 1.3.0 tudo acontece numa tela só: colar ou compartilhar o link e acompanhar o download no mesmo lugar.
 
+## Baixar
+
+A versão mais nova fica em [Releases](https://github.com/ailtoncja/subaru-dl-mobile/releases/latest): baixe o
+`SubaruDL-<versão>.apk` no celular e abra. Na primeira vez, o Android pede para permitir a instalação por essa fonte.
+Cada versão instala por cima da anterior sem perder os ajustes. Precisa de Android 10 ou mais novo, num celular de 64 bits.
+
 ## O que faz
 
 | Onde | O que tem |
@@ -59,7 +65,8 @@ adb shell am start -a android.intent.action.SEND -t text/plain --es android.inte
 adb logcat -s SUBARU:I
 ```
 
-O APK pronto para instalar fica em `dist/SubaruDL-<versão>.apk` (arm64 + x86_64, ~180 MB). A chave de assinatura
+O APK pronto para instalar fica em `dist/SubaruDL-<versão>.apk` (arm64 + x86_64, ~170 MB). Ele passa do limite de
+100 MB por arquivo do GitHub, então não vai no git: cada versão é publicada como Release (tag `v<versão>`). A chave de assinatura
 (`subaru-dl.jks` e `keystore.properties`) **não** vai para o git: guarde uma cópia, porque é ela que permite atualizar o app
 instalado depois.
 
