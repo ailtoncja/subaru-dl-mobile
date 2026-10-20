@@ -24,8 +24,10 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import com.subarudl.app.MainViewModel
 import com.subarudl.app.Screen
+import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.ui.home.HomeScreen
 import com.subarudl.app.ui.settings.SettingsScreen
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /** Curvas "enfatizadas" do Material 3: entra desacelerando, sai acelerando. */
@@ -52,6 +54,13 @@ fun AppRoot(vm: MainViewModel) {
                 val result = snackbar.showSnackbar(t.text, actionLabel = t.action, duration = if (t.action != null) SnackbarDuration.Long else SnackbarDuration.Short)
                 if (result == SnackbarResult.ActionPerformed) t.onAction?.invoke()
             }
+        }
+    }
+    LaunchedEffect(Unit) {
+        // Acabou de atualizar por dentro do app: o aviso aparece aqui e a notificação some
+        AppUpdater.justUpdated.filterNotNull().collect { v ->
+            AppUpdater.consumeJustUpdated()
+            vm.toast("Subaru DL atualizado para a versão $v")
         }
     }
     BackHandler(enabled = vm.screen == Screen.SETTINGS) {

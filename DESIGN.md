@@ -361,6 +361,9 @@ Capa 16:9 de 104dp à esquerda (8dp, fundo surface-container-highest com o ícon
 - **Concluído:** check dourado de 16dp e "MP4 · 1080p · 284 MB"; tocar abre o arquivo.
 Os cartões ficam sob títulos de seção (Baixando, Na fila, Falhas, Concluídos) e deslizam para o lugar ao mudar de seção.
 
+### Aviso da versão nova
+É o mesmo aviso neutro do alto da tela (surface-container-high, ícone de atualização em on-surface-variant), logo abaixo dos chips, nunca um diálogo na abertura. Ele acompanha a versão nova do app: "Saiu a versão 1.4.0" (tamanho e Baixar), "Baixando a versão 1.4.0" (barra de 4dp amarela embaixo do texto e "29% · 47,2 MB de 162 MB"), "Versão 1.4.0 pronta para instalar" (Instalar) e "Instalando…" (barra sem fim). Os botões de texto ficam à direita e descem para a linha de baixo quando não cabem; "Depois" esconde o aviso até o app abrir de novo, e "Novidades" abre uma folha com as notas da Release e o botão do próximo passo. Nos Ajustes, a linha "Subaru DL 1.4.0" da seção Sobre mostra o mesmo andamento com um botão de texto à direita (Verificar, Baixar, Instalar). Depois de atualizar, um snackbar confirma a versão.
+
 ### Inputs / Fields
 - **Campo do link:** TextField pílula de 28dp e 56dp de altura, fundo surface-container-high, sem linha indicadora em nenhum estado; ícone de link à esquerda; à direita, colar (vazio) ou limpar (com texto). Colar pelo teclado já lê o link.
 - **Campos de escolha (DropField):** OutlinedTextField somente leitura com menu que desce do campo (exposed dropdown); a opção atual aparece em amarelo no menu, com linha de apoio em body-small.

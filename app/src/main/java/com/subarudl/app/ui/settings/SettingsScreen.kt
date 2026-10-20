@@ -42,7 +42,6 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Hd
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lan
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -50,6 +49,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -91,7 +91,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.subarudl.app.BuildConfig
 import com.subarudl.app.MainViewModel
 import com.subarudl.app.Screen
 import com.subarudl.app.data.AppLog
@@ -108,6 +107,7 @@ import com.subarudl.app.ui.components.NavItem
 import com.subarudl.app.ui.components.Opt
 import com.subarudl.app.ui.components.SectionTitle
 import com.subarudl.app.ui.components.SwitchItem
+import com.subarudl.app.ui.home.AppVersionItem
 import com.subarudl.app.ui.home.DestinationItem
 import com.subarudl.app.ui.home.OrganizeField
 import com.subarudl.app.util.audioFormats
@@ -298,19 +298,25 @@ private fun MainSettings(vm: MainViewModel, snackbar: SnackbarHostState, onBack:
         item { NavItem("Imagens (gallery-dl)", "Organização, pausas e o que já foi baixado", Icons.Outlined.PhotoLibrary) { vm.settingsPage = "galeria" } }
         item { NavItem("Rede avançada", "Proxy, limite de velocidade e argumentos extras", Icons.Outlined.Lan) { vm.settingsPage = "rede" } }
         item { NavItem("Contas e cookies", "Entrar em sites para vídeos privados e perfis", Icons.Outlined.AccountCircle) { vm.settingsPage = "contas" } }
-        item { NavItem("Ferramentas e atualizações", "yt-dlp, gallery-dl, ffmpeg e aria2", Icons.Outlined.Build) { vm.settingsPage = "ferramentas" } }
+        item {
+            NavItem(
+                "Ferramentas e atualizações",
+                when {
+                    engine.ready -> "yt-dlp ${engine.ytdlp ?: ""}, gallery-dl, ffmpeg e aria2, prontos"
+                    engine.error != null -> "Erro nas ferramentas"
+                    else -> "Preparando as ferramentas…"
+                },
+                Icons.Outlined.Build,
+            ) { vm.settingsPage = "ferramentas" }
+        }
         item { NavItem("Registro", "Tudo o que as ferramentas estão fazendo", Icons.AutoMirrored.Outlined.Article) { vm.settingsPage = "logs" } }
 
         item { SectionTitle("Sobre") }
+        item { AppVersionItem(vm) }
         item {
-            InfoItem(
-                "Subaru DL ${BuildConfig.VERSION_NAME}",
-                "yt-dlp ${engine.ytdlp ?: "…"} · " + when {
-                    engine.ready -> "ferramentas prontas"
-                    engine.error != null -> "erro nas ferramentas"
-                    else -> "preparando as ferramentas"
-                },
-                Icons.Outlined.Info,
+            SwitchItem(
+                "Atualizar o app sozinho", "Procura versão nova ao abrir, baixa no Wi-Fi e avisa quando estiver pronta",
+                s.autoUpdateApp, { v -> vm.update { it.copy(autoUpdateApp = v) } }, Icons.Outlined.SystemUpdate,
             )
         }
         item {

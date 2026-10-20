@@ -10,6 +10,7 @@ Desde a 1.3.0 tudo acontece numa tela só: colar ou compartilhar o link e acompa
 A versão mais nova fica em [Releases](https://github.com/ailtoncja/subaru-dl-mobile/releases/latest): baixe o
 `SubaruDL-<versão>.apk` no celular e abra. Na primeira vez, o Android pede para permitir a instalação por essa fonte.
 Cada versão instala por cima da anterior sem perder os ajustes. Precisa de Android 10 ou mais novo, num celular de 64 bits.
+Da 1.4.0 em diante o próprio app avisa quando sai versão nova e se atualiza (veja "Atualização do app").
 
 ## O que faz
 
@@ -21,7 +22,7 @@ Cada versão instala por cima da anterior sem perder os ajustes. Precisa de Andr
 | **Imagens** | Com **Imagens** escolhido, o link vai para o gallery-dl: perfis, posts e álbuns (Instagram, X, Pixiv, Bluesky, Reddit, mangás…), grade de miniaturas para marcar no jeito do Google Fotos (a marcada encolhe com o círculo amarelo), carregar mais, pasta e organização, pular o que já baixou. Links que só podem ser vídeo (YouTube, TikTok, arquivo .mp4…) vão para o vídeo mesmo com Imagens escolhido. |
 | **Detalhes de um download** | Toque no cartão (ou nos três pontos dos concluídos): andamento ao vivo, pausar, retomar, cancelar, tentar de novo, entrar na conta quando o site pede login, abrir, compartilhar, copiar o link, abrir no site, baixar de novo, tirar da lista e apagar os arquivos (com confirmação). |
 | **Tablet** | A lista e os Ajustes ficam numa coluna central de até 720 dp, com a barra de cima alinhada a ela; as folhas usam a largura padrão do Material (640 dp). |
-| **Ajustes** | Qualidade e formatos padrão, ler o link copiado ao abrir, pastas de vídeos, músicas e imagens, só no Wi-Fi, downloads ao mesmo tempo, Turbo (aria2), avisos e som do Boxer; e as páginas de legendas, nomes e pastas, imagens (gallery-dl), rede avançada (proxy, limite, argumentos), **contas** (login dentro do app, `cookies.txt` ou cookies enviados do PC pelo Wi-Fi), ferramentas e atualização do yt-dlp/gallery-dl e registro. |
+| **Ajustes** | Qualidade e formatos padrão, ler o link copiado ao abrir, pastas de vídeos, músicas e imagens, só no Wi-Fi, downloads ao mesmo tempo, Turbo (aria2), avisos e som do Boxer; e as páginas de legendas, nomes e pastas, imagens (gallery-dl), rede avançada (proxy, limite, argumentos), **contas** (login dentro do app, `cookies.txt` ou cookies enviados do PC pelo Wi-Fi), ferramentas e atualização do yt-dlp/gallery-dl e registro. Em **Sobre**, a versão do app com **Verificar** e o ajuste **Atualizar o app sozinho**. |
 
 Outras coisas do Android: **Compartilhar → Subaru DL** a partir de qualquer app, links do YouTube abrem direto no app,
 link copiado é analisado ao abrir (opcional), download em segundo plano com notificação de progresso (serviço em
@@ -46,7 +47,7 @@ app/src/main/java/com/subarudl/app/
   SubaruApp.kt, MainActivity.kt, MainViewModel.kt
   data/      modelos, configurações, armazenamento (MediaStore/SAF), cookies, logs
   engine/    Args (monta o comando do yt-dlp), Ytdlp, GalleryDl, InfoParser, Engine
-  service/   DownloadManager (a fila), DownloadService (primeiro plano), Notifier
+  service/   DownloadManager (a fila), DownloadService (primeiro plano), Notifier, AppUpdater (versão nova do app)
   ui/        AppRoot (telas e voltar), theme, components,
              home (tela principal, lista, folhas de link e de detalhes), settings (Ajustes, login, receber cookies)
 app/src/main/assets/gallerydl.zip
@@ -95,6 +96,33 @@ app; desde a 1.3.0 ele manda um resumo por linha a cada segundo (`--summary-inte
 e o cartão mostra porcentagem, velocidade e tempo que falta também com o Turbo. O limite de velocidade da Rede
 avançada também vale com o Turbo: vai para o aria2 pelo próprio parâmetro dele (`--max-overall-download-limit`).
 
+## Atualização do app
+
+Igual ao PC: ao abrir (no máximo a cada 6 horas) o app consulta a Release mais nova deste repositório
+(`api.github.com/repos/ailtoncja/subaru-dl-mobile/releases/latest`). Achando uma versão mais nova:
+
+- no Wi-Fi, baixa o APK sozinho, em silêncio, pelo gerenciador de downloads do Android; nos dados móveis só avisa, com o
+  tamanho e o botão **Baixar**;
+- confere o arquivo antes de oferecer: tamanho, soma SHA-256 (o GitHub publica a de cada arquivo), se é mesmo o Subaru DL,
+  se é mais novo e se foi assinado pela mesma chave;
+- mostra o aviso no alto da tela principal ("Versão 1.4.0 pronta para instalar") e, com o app fechado, uma notificação;
+- ao tocar em **Instalar**, avisa se há downloads em andamento (eles param e continuam quando o app voltar), pede uma vez a
+  permissão do Android "Instalar apps desconhecidos" e instala por cima com o `PackageInstaller`. Como o app atualiza a si
+  mesmo e declara `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, o Android não pergunta "Atualizar este app?"; o app reinicia já na
+  versão nova e mostra "Subaru DL atualizado para a versão 1.4.0".
+
+Quem está na 1.3.0 ou antes precisa instalar a 1.4.0 à mão uma vez (essas versões não têm o atualizador).
+
+**Publicar uma versão:** subir `versionCode`/`versionName` em `app/build.gradle.kts`, gerar o APK assinado, copiar para
+`dist/SubaruDL-<versão>.apk` e criar a Release com a tag `v<versão>` e o APK anexado
+(`gh release create v<versão> dist/SubaruDL-<versão>.apk --title <versão> --notes-file dist/notas-<versão>.md`). Nas notas, o
+que vem antes de uma linha `---` aparece no app em "Novidades"; o que vem depois (como instalar pelo site) só no GitHub.
+
+**Testar sem publicar:** compile com `-PupdateApi=http://127.0.0.1:8765/latest.json -PupdateOrigin=http://127.0.0.1:8765/
+-PtestVersionName=1.3.98 -PtestVersionCode=100` (e outra versão maior para servir), sirva a pasta com um `latest.json` no
+formato da API do GitHub (`python -m http.server 8765`) e use `adb reverse tcp:8765 tcp:8765`. O endereço 10.0.2.2 não
+serve: o Android 17 bloqueia a rede local para os apps; o loopback do aparelho passa.
+
 ## Diferenças em relação ao PC
 
 - Sem bandeja, atalhos globais e monitor de área de transferência em segundo plano (o Android não deixa); no lugar,
@@ -111,5 +139,6 @@ avançada também vale com o Turbo: vai para o aria2 pelo próprio parâmetro de
 
 Celular arm64 de verdade (só o emulador x86_64), navegação de 3 botões (o emulador usado não desenha a barra), login em
 sites que pedem verificação extra, Wi-Fi apenas com troca de rede no meio do download, Turbo (aria2) em downloads longos,
-Instagram (precisa de conta). No emulador o YouTube pediu verificação de robô ("Sign in to confirm you're not a bot"):
+Instagram (precisa de conta), o atualizador num Android 10 ou 11 (lá o Android sempre pergunta antes de atualizar, e o app
+pode não reabrir sozinho; a notificação "atualizado" cobre esse caso). No emulador o YouTube pediu verificação de robô ("Sign in to confirm you're not a bot"):
 com a conta conectada em Ajustes → Contas e cookies isso costuma passar.

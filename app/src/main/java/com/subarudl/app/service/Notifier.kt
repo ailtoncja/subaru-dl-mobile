@@ -24,6 +24,8 @@ object Notifier {
     /** Canal com o som do Boxer. O som de um canal não muda depois de criado, por isso o id novo (o antigo era o toque padrão). */
     const val CH_DONE_SOUND = "concluidos_boxer"
     private const val CH_DONE_SOUND_OLD = "concluidos_som"
+    /** Versão nova do app pronta para instalar, e o aviso de "atualizado". */
+    const val CH_UPDATE = "atualizacao"
     const val ID_FOREGROUND = 1
     const val EXTRA_TAB = "tab"
 
@@ -38,6 +40,12 @@ object Notifier {
         nm.createNotificationChannel(
             NotificationChannel(CH_DONE, "Downloads concluídos", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "Avisa quando um download termina ou falha"
+                setSound(null, null)
+            },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_UPDATE, "Atualizações do app", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "Avisa quando a versão nova do Subaru DL está pronta para instalar"
                 setSound(null, null)
             },
         )

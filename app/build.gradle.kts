@@ -12,6 +12,11 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// Onde o app procura a versão nova. Para testar o atualizador sem publicar nada (com adb reverse tcp:8765 tcp:8765):
+// -PupdateApi=http://127.0.0.1:8765/latest.json -PupdateOrigin=http://127.0.0.1:8765/ -PtestVersionName=1.3.98 -PtestVersionCode=100
+val updateApi = findProperty("updateApi") as String? ?: "https://api.github.com/repos/ailtoncja/subaru-dl-mobile/releases/latest"
+val updateOrigin = findProperty("updateOrigin") as String? ?: "https://github.com/ailtoncja/subaru-dl-mobile/releases/download/"
+
 android {
     namespace = "com.subarudl.app"
 
@@ -24,8 +29,10 @@ android {
         // Android 10+: salvar em Filmes/Música/Imagens sem pedir permissão (armazenamento por escopo)
         minSdk = 29
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.3.0"
+        versionCode = (findProperty("testVersionCode") as String?)?.toInt() ?: 7
+        versionName = findProperty("testVersionName") as String? ?: "1.4.0"
+        buildConfigField("String", "UPDATE_API", "\"$updateApi\"")
+        buildConfigField("String", "UPDATE_ORIGIN", "\"$updateOrigin\"")
         // Celulares (arm64) e o emulador (x86_64): o resto só engordaria o APK
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

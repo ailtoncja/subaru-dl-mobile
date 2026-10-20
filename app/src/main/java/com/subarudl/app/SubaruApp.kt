@@ -9,6 +9,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.subarudl.app.data.SettingsStore
+import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.service.DownloadManager
 import com.subarudl.app.service.Notifier
 
@@ -22,6 +23,7 @@ class SubaruApp : Application(), SingletonImageLoader.Factory {
         Notifier.createChannels(this)
         manager = DownloadManager(this)
         manager.start()
+        AppUpdater.init(this)
     }
 
     /** Miniaturas: cache de disco para a lista de vídeos não baixar a mesma capa duas vezes. */

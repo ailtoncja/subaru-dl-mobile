@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +50,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -270,6 +272,7 @@ private fun LinkBar(vm: MainViewModel, onPaste: () -> Unit) {
                 },
             )
         }
+        UpdateNotice(vm)
         if (!net.online) Notice(Icons.Outlined.WifiOff, "Sem internet", "Os downloads continuam sozinhos quando a conexão voltar.")
         else if (settings.wifiOnly && !net.wifi) {
             Notice(
@@ -323,15 +326,17 @@ private fun Working(text: String) {
     }
 }
 
-/** Aviso no alto da tela: erro do link, falta de internet, espera pelo Wi-Fi. */
+/** Aviso no alto da tela: erro do link, falta de internet, espera pelo Wi-Fi, versão nova do app. */
 @Composable
-private fun Notice(
+internal fun Notice(
     icon: ImageVector,
     title: String,
     body: String?,
     error: Boolean = false,
     detail: String? = null,
     actions: List<Pair<String, () -> Unit>> = emptyList(),
+    /** Barra de andamento embaixo do texto (0 a 1; negativo = sem saber quanto falta). */
+    progress: Float? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     var showDetail by rememberSaveable(detail) { mutableStateOf(false) }
@@ -365,10 +370,15 @@ private fun Notice(
                         )
                     }
                 }
+                progress?.let { p ->
+                    val bar = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp)
+                    if (p < 0f) LinearProgressIndicator(bar) else LinearProgressIndicator({ p }, bar)
+                }
             }
         }
         if (actions.isEmpty()) Spacer(Modifier.height(14.dp))
-        else Row(Modifier.fillMaxWidth().padding(start = 44.dp, end = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.End) {
+        // Com letra grande, os botões que não cabem descem para a linha de baixo
+        else FlowRow(Modifier.fillMaxWidth().padding(start = 44.dp, end = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.End) {
             // No aviso de erro os botões usam a cor do texto do aviso, não o amarelo
             val colors = if (error) ButtonDefaults.textButtonColors(contentColor = scheme.onErrorContainer) else ButtonDefaults.textButtonColors()
             actions.forEach { (label, onClick) -> TextButton(onClick, colors = colors) { Text(label) } }

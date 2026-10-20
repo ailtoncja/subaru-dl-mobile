@@ -20,6 +20,7 @@ import com.subarudl.app.engine.Engine
 import com.subarudl.app.engine.EngineException
 import com.subarudl.app.engine.GalleryDl
 import com.subarudl.app.engine.Ytdlp
+import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.util.compactRanges
 import com.subarudl.app.util.extractLinks
 import kotlinx.coroutines.CancellationException
@@ -108,6 +109,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Sobe a cada download novo: a lista volta ao topo para mostrar o cartão que entrou. */
     var addedTick by mutableIntStateOf(0)
         private set
+
+    fun scrollToTop() {
+        addedTick++
+    }
+
+    /** Versão nova do app; "Depois" esconde o aviso dela até o app abrir de novo. */
+    val update = AppUpdater.state
+    var updateHidden by mutableStateOf<String?>(null)
 
     private val _toasts = MutableSharedFlow<Toast>(extraBufferCapacity = 8)
     val toasts: SharedFlow<Toast> = _toasts.asSharedFlow()

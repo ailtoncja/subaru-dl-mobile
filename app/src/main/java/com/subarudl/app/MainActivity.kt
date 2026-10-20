@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.subarudl.app.data.Cookies
 import com.subarudl.app.data.SettingsStore
+import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.service.Notifier
 import com.subarudl.app.ui.AppRoot
 import com.subarudl.app.ui.theme.SubaruTheme
@@ -51,6 +52,19 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         checkClipboard = !recreated
         recreated = false
+        AppUpdater.foreground = true
+        AppUpdater.checkIfDue()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Voltou da tela "Instalar apps desconhecidos": a instalação da versão nova continua
+        AppUpdater.onResume(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        AppUpdater.foreground = false
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -67,8 +81,11 @@ class MainActivity : ComponentActivity() {
             vm.focus = when (t) {
                 "queue-done" -> Section.DONE
                 "queue-fail" -> Section.FAILED
+                "update" -> null
                 else -> Section.ACTIVE
             }
+            // Aviso da versão nova: ele fica no alto da tela principal
+            if (t == "update") vm.scrollToTop()
         }
         if (intent.action == Intent.ACTION_SEND || intent.action == Intent.ACTION_VIEW) lastIncomingAt = SystemClock.elapsedRealtime()
         when (intent.action) {

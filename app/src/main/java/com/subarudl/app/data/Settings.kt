@@ -63,6 +63,9 @@ data class AppSettings(
     val updateChannel: String = "stable",
     val autoUpdateTools: Boolean = true,
     val lastToolsCheck: Long = 0,
+    // Versão nova do próprio app (Releases do GitHub)
+    val autoUpdateApp: Boolean = true,
+    val lastAppCheck: Long = 0,
 ) {
     /** Opções padrão para um download novo, vindas das configurações. */
     fun newOptions(): DownloadOptions = DownloadOptions(
