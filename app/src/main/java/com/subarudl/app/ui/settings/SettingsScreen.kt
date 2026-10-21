@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ClosedCaption
@@ -313,6 +314,7 @@ private fun MainSettings(vm: MainViewModel, snackbar: SnackbarHostState, onBack:
 
         item { SectionTitle("Sobre") }
         item { AppVersionItem(vm) }
+        item { NavItem("Assistente de primeiro uso", "As três escolhas do começo: pastas, jeito de baixar e contas", Icons.Outlined.AutoAwesome) { vm.setupOpen = true } }
         item {
             SwitchItem(
                 "Atualizar o app sozinho", "Procura versão nova ao abrir, baixa no Wi-Fi e avisa quando estiver pronta",

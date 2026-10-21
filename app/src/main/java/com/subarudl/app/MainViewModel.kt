@@ -101,6 +101,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     var screen by mutableStateOf(Screen.HOME)
     var settingsPage by mutableStateOf<String?>(null)
+
+    /** Assistente de primeiro uso: abre sozinho na primeira vez; depois, por Ajustes → Sobre. */
+    var setupOpen by mutableStateOf(!SettingsStore.value.setupDone)
+
+    /** Fecha o assistente (concluído ou pulado) e a tela principal começa no jeito de baixar escolhido. */
+    fun closeSetup(finished: Boolean) {
+        if (!settings.value.setupDone) update { it.copy(setupDone = true) }
+        setupOpen = false
+        if (job != LinkJob.IMAGES) job = if (settings.value.defaultMode == Mode.AUDIO) LinkJob.AUDIO else LinkJob.VIDEO
+        if (finished) toast("Tudo pronto. Compartilhe ou cole um link para baixar.")
+    }
     var job by mutableStateOf(if (SettingsStore.value.defaultMode == Mode.AUDIO) LinkJob.AUDIO else LinkJob.VIDEO)
 
     /** Seção pedida por uma notificação; a tela rola até ela e limpa o pedido. */
@@ -450,6 +461,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         lastIncoming = key
         screen = Screen.HOME
         settingsPage = null
+        // Chegou um link logo na primeira vez: o link vem primeiro, o assistente volta na próxima abertura
+        setupOpen = false
         submit(key)
     }
 }

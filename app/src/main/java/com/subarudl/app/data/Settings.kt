@@ -66,6 +66,8 @@ data class AppSettings(
     // Versão nova do próprio app (Releases do GitHub)
     val autoUpdateApp: Boolean = true,
     val lastAppCheck: Long = 0,
+    // Assistente de primeiro uso já concluído ou pulado
+    val setupDone: Boolean = false,
 ) {
     /** Opções padrão para um download novo, vindas das configurações. */
     fun newOptions(): DownloadOptions = DownloadOptions(
@@ -100,7 +102,9 @@ object SettingsStore {
         appContext = context.applicationContext
         val raw = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
         if (raw != null) {
-            _state.value = runCatching { AppJson.decodeFromString<AppSettings>(raw) }.getOrDefault(AppSettings())
+            val saved = runCatching { AppJson.decodeFromString<AppSettings>(raw) }.getOrDefault(AppSettings())
+            // Quem já usava o app antes do assistente existir não precisa vê-lo
+            _state.value = if ("\"setupDone\"" in raw) saved else saved.copy(setupDone = true)
         }
     }
 
@@ -111,5 +115,6 @@ object SettingsStore {
             .edit().putString(KEY, AppJson.encodeToString(AppSettings.serializer(), novo)).apply()
     }
 
-    fun reset() = update { AppSettings() }
+    /** Restaurar não traz o assistente de volta (ele continua em Ajustes → Sobre). */
+    fun reset() = update { AppSettings(setupDone = true) }
 }

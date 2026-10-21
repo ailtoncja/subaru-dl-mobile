@@ -29,8 +29,8 @@ android {
         // Android 10+: salvar em Filmes/Música/Imagens sem pedir permissão (armazenamento por escopo)
         minSdk = 29
         targetSdk = 37
-        versionCode = (findProperty("testVersionCode") as String?)?.toInt() ?: 7
-        versionName = findProperty("testVersionName") as String? ?: "1.4.0"
+        versionCode = (findProperty("testVersionCode") as String?)?.toInt() ?: 8
+        versionName = findProperty("testVersionName") as String? ?: "1.5.0"
         buildConfigField("String", "UPDATE_API", "\"$updateApi\"")
         buildConfigField("String", "UPDATE_ORIGIN", "\"$updateOrigin\"")
         // Celulares (arm64) e o emulador (x86_64): o resto só engordaria o APK

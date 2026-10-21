@@ -377,6 +377,9 @@ Os cartões ficam sob títulos de seção (Baixando, Na fila, Falhas, Concluído
 ### Lists (Ajustes e folhas)
 ListItem do Material com fundo transparente, ícone contornado à esquerda, valor atual na linha de apoio e chevron quando abre outra página; linhas com switch ligam pela linha inteira. Grupos sob títulos de seção em title-small amarelo, 48dp de altura.
 
+### Assistente de primeiro uso
+Tela cheia (não diálogo), só na primeira abertura. Barra de cima pequena com "Preparar o Subaru DL", seta de voltar a partir da segunda etapa e "Pular" em botão de texto; Voltar do sistema volta uma etapa e, na primeira, pula. Embaixo dela, três faixas de 4dp (amarelas até a etapa atual, surfaceContainerHighest depois) com o nome de cada etapa em label-medium. Cada etapa abre com headline-small e uma explicação em body-medium cinza; as etapas trocam pelo eixo horizontal compartilhado, igual às telas. Pé fixo com divisor, "Dá para mudar tudo depois em Ajustes" em body-small e o único botão amarelo (Continuar, depois Concluir). Nas contas, os três jeitos são botões tonais de largura cheia, cada um com a explicação em cima. Um link que chega (Compartilhar ou link copiado) fecha o assistente sem marcar como feito.
+
 ### Sheets e diálogos
 - **Folhas de opções:** ModalBottomSheet do Material, aberta inteira, topo de 28dp; conteúdo rolando com rótulos em title-small cinza pervinca, capa de 136dp com 12dp, Vídeo/Áudio em botão segmentado, chips de qualidade, campos; barra de ação fixa no pé (Pôr na fila + Baixar).
 - **Grade de imagens:** fotos quadradas no estilo Google Fotos (ver Shapes), círculo de seleção de 24dp no canto com sombra radial para aparecer em foto clara, número da foto em etiqueta escura de 4dp.

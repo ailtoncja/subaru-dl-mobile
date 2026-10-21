@@ -27,6 +27,7 @@ import com.subarudl.app.Screen
 import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.ui.home.HomeScreen
 import com.subarudl.app.ui.settings.SettingsScreen
+import com.subarudl.app.ui.setup.SetupScreen
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -63,7 +64,7 @@ fun AppRoot(vm: MainViewModel) {
             vm.toast("Subaru DL atualizado para a versão $v")
         }
     }
-    BackHandler(enabled = vm.screen == Screen.SETTINGS) {
+    BackHandler(enabled = vm.screen == Screen.SETTINGS && !vm.setupOpen) {
         if (vm.settingsPage != null) vm.settingsPage = null else vm.screen = Screen.HOME
     }
 
@@ -74,7 +75,8 @@ fun AppRoot(vm: MainViewModel) {
         else -> 2
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        AnimatedContent(
+        // Assistente de primeiro uso: tela cheia no lugar de tudo, só enquanto estiver aberto
+        if (vm.setupOpen) SetupScreen(vm, snackbar) else AnimatedContent(
             targetState = Triple(vm.screen, vm.settingsPage, depth),
             transitionSpec = { sharedAxisX(forward = targetState.third > initialState.third) },
             label = "tela",
