@@ -11,6 +11,7 @@ import java.io.File
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
 /**
@@ -43,7 +44,8 @@ object GalleryDl {
             while (entry != null) {
                 val out = File(target, entry.name)
                 // evita sair da pasta de destino
-                if (!out.canonicalPath.startsWith(target.canonicalPath)) throw SecurityException("zip inválido")
+                val path = out.canonicalPath
+                if (path != target.canonicalPath && !path.startsWith(target.canonicalPath + File.separator)) throw SecurityException("zip inválido")
                 if (entry.isDirectory) out.mkdirs() else {
                     out.parentFile?.mkdirs()
                     out.outputStream().use { zip.copyTo(it) }
@@ -115,7 +117,7 @@ object GalleryDl {
     /** Começa o download; cada linha de saída (caminho do arquivo ou "# " se pulado) vai para [onLine]. Devolve o código de saída. */
     fun download(ctx: Context, id: String, args: List<String>, onLine: (String) -> Unit, onErr: (String) -> Unit): Int {
         ensureInstalled(ctx)
-        AppLog.cmd("gallery-dl " + args.joinToString(" ") { if (Regex("\\s").containsMatchIn(it)) "\"$it\"" else it }, id)
+        AppLog.cmd(Args.forLog("gallery-dl", args), id)
         val p = builder(ctx, args).start()
         processes[id] = p
         val errThread = Thread { p.errorStream.bufferedReader().forEachLine(onErr) }.also { it.start() }
@@ -141,7 +143,7 @@ object GalleryDl {
     fun list(ctx: Context, url: String, start: Int, count: Int, s: AppSettings): Listing {
         ensureInstalled(ctx)
         val args = listOf("--no-colors", "-J", "--range", "$start-${start + count - 1}") + access(ctx, s) + listOf("--", url)
-        AppLog.cmd("gallery-dl " + args.joinToString(" "))
+        AppLog.cmd(Args.forLog("gallery-dl", args))
         val p = builder(ctx, args).start()
         val err = StringBuilder()
         val errThread = Thread { p.errorStream.bufferedReader().forEachLine { err.appendLine(it) } }.also { it.start() }
@@ -193,32 +195,63 @@ object GalleryDl {
         val latest = json.getJSONObject("info").getString("version")
         if (latest == version(ctx)) return latest
         val files = json.getJSONArray("urls")
-        var wheel: String? = null
+        var wheel: JSONObject? = null
         for (i in 0 until files.length()) {
             val f = files.getJSONObject(i)
-            if (f.optString("packagetype") == "bdist_wheel") wheel = f.getString("url")
+            if (f.optString("packagetype") == "bdist_wheel") wheel = f
         }
-        val url = wheel ?: throw EngineException("Não achei o pacote do gallery-dl no PyPI")
+        wheel ?: throw EngineException("Não achei o pacote do gallery-dl no PyPI")
+        val url = wheel.getString("url")
+        // Só o servidor de arquivos do PyPI, por https, e com o resumo (SHA-256) que o próprio PyPI publica
+        val host = runCatching { URL(url) }.getOrNull()
+        if (host == null || host.protocol != "https" || host.host != "files.pythonhosted.org") throw EngineException("O PyPI indicou um endereço estranho para o gallery-dl; nada foi trocado")
+        val want = wheel.optJSONObject("digests")?.optString("sha256").orEmpty().lowercase()
+        if (!Regex("[0-9a-f]{64}").matches(want)) throw EngineException("O PyPI não informou o resumo do pacote; nada foi trocado")
         val tmp = File(ctx.cacheDir, "gallery_dl.whl")
-        URL(url).openStream().use { i -> tmp.outputStream().use { i.copyTo(it) } }
-        ensureInstalled(ctx)
-        val target = libDir(ctx)
-        File(target, "gallery_dl").deleteRecursively()
-        // O wheel é um zip com a pasta gallery_dl/ dentro
-        tmp.inputStream().use { input ->
-            ZipInputStream(input).use { zip ->
-                var e = zip.nextEntry
-                while (e != null) {
-                    if (e.name.startsWith("gallery_dl/") && !e.isDirectory) {
-                        val out = File(target, e.name)
-                        out.parentFile?.mkdirs()
-                        out.outputStream().use { zip.copyTo(it) }
+        try {
+            val md = MessageDigest.getInstance("SHA-256")
+            val c = host.openConnection() as HttpURLConnection
+            c.connectTimeout = 15000
+            c.readTimeout = 30000
+            c.setRequestProperty("User-Agent", "SubaruDL")
+            c.inputStream.use { i ->
+                tmp.outputStream().use { out ->
+                    val buf = ByteArray(1 shl 16)
+                    var total = 0L
+                    while (true) {
+                        val n = i.read(buf)
+                        if (n < 0) break
+                        total += n
+                        if (total > 64L * 1024 * 1024) throw EngineException("O pacote do gallery-dl veio grande demais")
+                        md.update(buf, 0, n)
+                        out.write(buf, 0, n)
                     }
-                    e = zip.nextEntry
                 }
             }
+            val got = md.digest().joinToString("") { "%02x".format(it) }
+            if (got != want) throw EngineException("O pacote do gallery-dl chegou diferente do publicado no PyPI; nada foi trocado")
+            ensureInstalled(ctx)
+            val target = libDir(ctx)
+            File(target, "gallery_dl").deleteRecursively()
+            // O wheel é um zip com a pasta gallery_dl/ dentro
+            tmp.inputStream().use { input ->
+                ZipInputStream(input).use { zip ->
+                    var e = zip.nextEntry
+                    while (e != null) {
+                        if (e.name.startsWith("gallery_dl/") && !e.isDirectory) {
+                            val out = File(target, e.name)
+                            // evita sair da pasta de destino
+                            if (!out.canonicalPath.startsWith(target.canonicalPath + File.separator)) throw SecurityException("pacote do gallery-dl inválido")
+                            out.parentFile?.mkdirs()
+                            out.outputStream().use { zip.copyTo(it) }
+                        }
+                        e = zip.nextEntry
+                    }
+                }
+            }
+        } finally {
+            tmp.delete()
         }
-        tmp.delete()
         return version(ctx) ?: latest
     }
 

@@ -1,6 +1,7 @@
 package com.subarudl.app
 
 import android.app.Application
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -8,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.subarudl.app.data.AppSettings
+import com.subarudl.app.data.Cookies
 import com.subarudl.app.data.DownloadOptions
 import com.subarudl.app.data.GalleryFile
 import com.subarudl.app.data.GalleryOptions
@@ -441,6 +443,51 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             galLinks = emptyList()
             addedTick++
         } else toast("Marque pelo menos um arquivo")
+    }
+
+    // ---------- cookies.txt ----------
+
+    /** cookies.txt que chegou de outro app ("Abrir com"/"Compartilhar"): só grava depois que a pessoa confirma. */
+    var pendingCookies by mutableStateOf<Cookies.Parsed?>(null)
+        private set
+
+    /**
+     * Lê um cookies.txt fora da linha principal. [confirm] = veio de outro app: mostra o pedido de confirmação antes
+     * de gravar. Pelo seletor de arquivos do próprio app, grava direto (foi a pessoa que escolheu).
+     */
+    fun importCookies(uri: Uri, confirm: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val parsed = try {
+                Cookies.parse(Cookies.read(ctx, uri))
+            } catch (e: Cookies.ReadError) {
+                toast(e.message ?: "Não consegui ler esse arquivo")
+                return@launch
+            }
+            if (parsed.count == 0) {
+                toast(if (parsed.ignored > 0) "Nenhum cookie válido nesse arquivo" else "Esse arquivo não parece um cookies.txt")
+                return@launch
+            }
+            if (confirm) withContext(Dispatchers.Main) { pendingCookies = parsed }
+            else saveCookies(parsed)
+        }
+    }
+
+    fun confirmCookies() {
+        val parsed = pendingCookies ?: return
+        pendingCookies = null
+        viewModelScope.launch(Dispatchers.IO) { saveCookies(parsed) }
+    }
+
+    fun dismissCookies() {
+        pendingCookies = null
+    }
+
+    private fun saveCookies(parsed: Cookies.Parsed) {
+        val r = runCatching { Cookies.save(ctx, parsed) }.getOrElse {
+            toast("Não consegui guardar os cookies")
+            return
+        }
+        toast("${r.cookies} cookies de ${r.sites} sites importados")
     }
 
     // ---------- Entrada de fora (Compartilhar, área de transferência) ----------

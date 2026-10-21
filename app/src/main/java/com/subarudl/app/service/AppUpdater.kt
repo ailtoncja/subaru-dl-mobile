@@ -108,6 +108,8 @@ object AppUpdater {
             forget()
             return
         }
+        // Pronta numa versão anterior do app (o APK ficava fora da pasta interna): confere e copia de novo
+        if (p.getString("ready", null) != null && readyFile() == null) p.edit().remove("ready").apply()
         _state.value = when {
             p.getString("ready", null) == release.version && readyFile() != null -> UpdateState(UpdatePhase.READY, release)
             p.getLong("downloadId", -1) >= 0 -> UpdateState(UpdatePhase.DOWNLOADING, release, total = release.size).also { watch() }
@@ -274,37 +276,71 @@ object AppUpdater {
         val id = p.getLong("downloadId", -1)
         val rel = _state.value.release ?: return@withLock
         if (id < 0 || p.getString("ready", null) == rel.version || query(id)?.status != SystemDownloads.STATUS_SUCCESSFUL) return@withLock
-        val problem = verify(apkFile(rel), rel)
+        // O gerenciador de downloads grava numa pasta que outros apps com acesso ao armazenamento alcançam:
+        // o APK vem para a pasta interna do app antes de qualquer conferência, e é dessa cópia que se instala
+        val problem = runCatching { moveInside(apkFile(rel), rel) }.getOrElse { e ->
+            AppLog.w("Copiar a versão nova do app: ${e.message}")
+            "Não consegui guardar o arquivo baixado."
+        } ?: verify(readyApk(rel), rel)
+        downloads().remove(id)
+        runCatching { apkDir().deleteRecursively() }
         if (problem != null) {
-            downloads().remove(id)
-            p.edit().remove("downloadId").apply()
+            p.edit().remove("downloadId").remove("readySha").remove("readySize").apply()
+            runCatching { internalDir().deleteRecursively() }
             AppLog.w("Versão nova do app recusada: $problem")
             _state.value = UpdateState(UpdatePhase.FAILED, rel, message = problem)
             return@withLock
         }
-        p.edit().putString("ready", rel.version).apply()
+        p.edit().putString("ready", rel.version).remove("downloadId").apply()
         _state.value = UpdateState(UpdatePhase.READY, rel)
         AppLog.i("Versão nova do app baixada: ${rel.version}")
         if (!foreground) notifyReady(rel)
     }
 
-    /** Devolve o motivo para recusar o arquivo, ou null se ele pode ser instalado. */
+    /** Copia o APK baixado para a pasta interna do app. Devolve o motivo para recusar, ou null. */
+    private fun moveInside(src: File, rel: AppRelease): String? {
+        if (!src.isFile) return "O arquivo baixado sumiu."
+        if (rel.size > 0 && src.length() != rel.size) return "O arquivo chegou incompleto."
+        val dir = internalDir().apply { deleteRecursively(); mkdirs() }
+        val tmp = File(dir, "baixando.tmp")
+        src.inputStream().use { input -> tmp.outputStream().use { input.copyTo(it, 1 shl 16) } }
+        if (!tmp.renameTo(readyApk(rel))) return "Não consegui guardar o arquivo baixado."
+        return null
+    }
+
+    /** Devolve o motivo para recusar o arquivo, ou null se ele pode ser instalado. Guarda o tamanho e o resumo conferidos. */
     private fun verify(file: File, rel: AppRelease): String? {
         if (!file.exists()) return "O arquivo baixado sumiu."
         if (rel.size > 0 && file.length() != rel.size) return "O arquivo chegou incompleto."
-        rel.sha256?.let { want -> if (!sha256(file).equals(want, ignoreCase = true)) return "O arquivo chegou diferente do publicado." }
+        val digest = sha256(file)
+        rel.sha256?.let { want -> if (!digest.equals(want, ignoreCase = true)) return "O arquivo chegou diferente do publicado." }
         val pm = app.packageManager
         val info = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: return "O arquivo baixado não é um APK válido."
         if (info.packageName != app.packageName) return "O APK baixado é de outro app."
         if (info.longVersionCode <= BuildConfig.VERSION_CODE) return "O APK baixado não é mais novo que este."
-        // Instalar por cima só funciona com a mesma chave: melhor dizer agora do que o Android recusar depois
-        val theirs = signers(info)
-        val mine = signers(pm.getPackageInfo(app.packageName, PackageManager.GET_SIGNING_CERTIFICATES))
-        if (theirs.isNotEmpty() && mine.isNotEmpty() && theirs != mine) return "O APK baixado foi assinado por outra chave e não instala por cima."
+        // Só instala por cima o que foi assinado pela chave deste app; sem assinatura legível, recusa
+        signerProblem(pm, info)?.let { return it }
+        prefs().edit().putString("readySha", digest).putLong("readySize", file.length()).commit()
         return null
     }
 
-    private fun signers(p: PackageInfo): Set<String> = p.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
+    /** A assinatura do APK baixado é a deste app? Na dúvida (sem assinatura, assinatura ilegível), não. */
+    private fun signerProblem(pm: PackageManager, archive: PackageInfo): String? {
+        val other = "O APK baixado foi assinado por outra chave e não instala por cima."
+        val theirs = archive.signingInfo ?: return "Não consegui ler a assinatura do APK baixado."
+        val mine = runCatching { pm.getPackageInfo(app.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo }.getOrNull()
+            ?: return "Não consegui ler a assinatura deste app."
+        val theirCerts = theirs.apkContentsSigners.orEmpty().toList()
+        val myCerts = mine.apkContentsSigners.orEmpty().toList()
+        if (theirCerts.isEmpty() || myCerts.isEmpty()) return other
+        // O Android confirma que o certificado atual é mesmo o deste app instalado
+        if (!myCerts.all { pm.hasSigningCertificate(app.packageName, it.toByteArray(), PackageManager.CERT_INPUT_RAW_X509) }) return other
+        val same = theirCerts.map { it.toCharsString() }.toSet() == myCerts.map { it.toCharsString() }.toSet()
+        // Troca de chave pelo esquema de rotação do Android: o APK novo (de uma chave só) traz a chave atual no histórico
+        val rotated = !theirs.hasMultipleSigners() && !mine.hasMultipleSigners() && myCerts.size == 1 &&
+            theirs.signingCertificateHistory.orEmpty().any { it == myCerts[0] }
+        return if (same || rotated) null else other
+    }
 
     private fun sha256(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
@@ -352,20 +388,45 @@ object AppUpdater {
         _state.update { it.copy(phase = UpdatePhase.INSTALLING, message = null) }
         scope.launch {
             runCatching {
+                // O que foi conferido depois do download: tamanho e resumo (SHA-256) da cópia interna
+                val wantSha = prefs().getString("readySha", null)
+                val wantSize = prefs().getLong("readySize", -1)
+                if (wantSha == null || wantSize <= 0) {
+                    forgetReady(rel, "O arquivo baixado não foi conferido; baixe de novo.")
+                    return@launch
+                }
                 val installer = app.packageManager.packageInstaller
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                     setAppPackageName(app.packageName)
-                    setSize(file.length())
+                    setSize(wantSize)
                     // O app atualizando a si mesmo (com UPDATE_PACKAGES_WITHOUT_USER_ACTION): o Android 12+ não pergunta
                     if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
                 }
                 val sessionId = installer.createSession(params)
                 installer.openSession(sessionId).use { session ->
+                    // Confere de novo os bytes exatos que entram no instalador, logo antes de confirmar
+                    val md = MessageDigest.getInstance("SHA-256")
+                    var written = 0L
                     file.inputStream().use { input ->
-                        session.openWrite("base.apk", 0, file.length()).use { out ->
-                            input.copyTo(out, 1 shl 16)
+                        session.openWrite("base.apk", 0, wantSize).use { out ->
+                            val buf = ByteArray(1 shl 16)
+                            while (true) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                written += n
+                                if (written > wantSize) break
+                                md.update(buf, 0, n)
+                                out.write(buf, 0, n)
+                            }
                             session.fsync(out)
                         }
+                    }
+                    val got = md.digest().joinToString("") { "%02x".format(it) }
+                    if (written != wantSize || !got.equals(wantSha, ignoreCase = true) || (rel.sha256 != null && !got.equals(rel.sha256, ignoreCase = true))) {
+                        session.abandon()
+                        AppLog.w("Instalar a versão nova do app: o arquivo mudou depois de conferido")
+                        forgetReady(rel, "O arquivo baixado mudou depois de conferido; baixe de novo.")
+                        return@launch
                     }
                     prefs().edit().putString("installing", rel.version).commit()
                     val status = PendingIntent.getBroadcast(
@@ -431,17 +492,30 @@ object AppUpdater {
 
     // ---------- Arquivos, rede e avisos ----------
 
+    /** Onde o gerenciador de downloads do Android grava (pasta do app no armazenamento compartilhado). */
     private fun apkDir() = File(app.getExternalFilesDir(null), DIR)
     private fun apkFile(rel: AppRelease) = File(apkDir(), "SubaruDL-${rel.version}.apk")
-    private fun readyFile(): File? = _state.value.release?.let(::apkFile)?.takeIf { it.exists() }
-        ?: prefs().getString("release", null)?.let { runCatching { AppJson.decodeFromString(AppRelease.serializer(), it) }.getOrNull() }?.let(::apkFile)?.takeIf { it.exists() }
+
+    /** A cópia conferida e instalada: pasta interna, sem backup, que só o app alcança. */
+    private fun internalDir() = File(app.noBackupFilesDir, DIR)
+    private fun readyApk(rel: AppRelease) = File(internalDir(), "SubaruDL-${rel.version}.apk")
+    private fun readyFile(): File? = _state.value.release?.let(::readyApk)?.takeIf { it.exists() }
+        ?: prefs().getString("release", null)?.let { runCatching { AppJson.decodeFromString(AppRelease.serializer(), it) }.getOrNull() }?.let(::readyApk)?.takeIf { it.exists() }
+
+    /** O arquivo pronto não serve mais: apaga e volta para "disponível", com o motivo. */
+    private fun forgetReady(rel: AppRelease, message: String) {
+        prefs().edit().remove("ready").remove("readySha").remove("readySize").remove("installing").apply()
+        runCatching { internalDir().deleteRecursively() }
+        _state.value = UpdateState(UpdatePhase.AVAILABLE, rel, message = message)
+    }
 
     /** Esquece a versão guardada e apaga o APK baixado. */
     private fun forget() {
         val p = prefs()
         p.getLong("downloadId", -1).takeIf { it >= 0 }?.let { id -> runCatching { downloads().remove(id) } }
-        p.edit().remove("release").remove("downloadId").remove("ready").apply()
+        p.edit().remove("release").remove("downloadId").remove("ready").remove("readySha").remove("readySize").apply()
         runCatching { apkDir().deleteRecursively() }
+        runCatching { internalDir().deleteRecursively() }
     }
 
     private class Net(val online: Boolean, val unmetered: Boolean)

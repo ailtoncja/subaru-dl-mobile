@@ -15,7 +15,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import com.subarudl.app.data.Cookies
 import com.subarudl.app.data.SettingsStore
 import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.service.Notifier
@@ -101,10 +100,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Um arquivo aberto ou compartilhado com o app: só serve se for um cookies.txt. */
+    /**
+     * Um arquivo aberto ou compartilhado com o app: só serve se for um cookies.txt. Outro app pode mandar um arquivo
+     * sem a pessoa saber, então o app lê, mostra quantos cookies e de quais sites, e só grava se ela confirmar.
+     */
     private fun importCookies(uri: Uri) {
-        val r = Cookies.importFile(this, uri)
-        vm.toast(if (r.cookies > 0) "${r.cookies} cookies de ${r.sites} sites importados" else "Esse arquivo não parece um cookies.txt")
+        vm.importCookies(uri, confirm = true)
     }
 
     /** Link copiado: só dá para ler a área de transferência com o app em primeiro plano. */

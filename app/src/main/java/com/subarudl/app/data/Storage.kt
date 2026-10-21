@@ -29,8 +29,12 @@ object Storage {
         base.listFiles()?.filter { it.isDirectory && it.name !in keep }?.forEach { it.deleteRecursively() }
     }
 
+    /** Pacotes de instalação do Android: o app guarda como arquivo qualquer e não oferece abrir (abrir = instalar). */
+    fun isPackage(name: String) = name.substringAfterLast('.', "").lowercase() in setOf("apk", "apks", "xapk", "apkm")
+
     fun mimeOf(name: String): String {
         val ext = name.substringAfterLast('.', "").lowercase()
+        if (isPackage(name)) return "application/octet-stream"
         return when (ext) {
             "srt" -> "application/x-subrip"
             "vtt" -> "text/vtt"
@@ -46,9 +50,26 @@ object Storage {
     /** Arquivos temporários do yt-dlp que nunca devem ser entregues. */
     fun isTemp(name: String) = Regex("\\.(part|ytdl|temp|tmp)$|\\.f\\d+\\.[a-z0-9]+$|\\.part-Frag\\d+$", RegexOption.IGNORE_CASE).containsMatchIn(name)
 
-    /** Move [file] da pasta de trabalho para o destino, mantendo as subpastas ([rel] = caminho relativo). */
-    fun deliver(ctx: Context, file: File, rel: String, destination: String?): OutputFile? {
-        if (!file.exists() || file.length() == 0L) return null
+    /**
+     * Caminho de [file] dentro da pasta de trabalho [work] ("pasta/arquivo.mp4"), ou null se ele estiver fora dela
+     * (caminho com "..", atalho para outro lugar) ou tiver partes vazias, "." ou "..".
+     */
+    fun relativeInside(work: File, file: File): String? {
+        val base = runCatching { work.canonicalFile }.getOrNull() ?: return null
+        val target = runCatching { file.canonicalFile }.getOrNull() ?: return null
+        if (!target.path.startsWith(base.path + File.separator)) return null
+        val rel = target.relativeTo(base).invariantSeparatorsPath
+        if (rel.isEmpty() || rel.split('/').any { it.isEmpty() || it == "." || it == ".." }) return null
+        return rel
+    }
+
+    /** Move [file] da pasta de trabalho [work] para o destino, mantendo as subpastas. Arquivos de fora da pasta são recusados. */
+    fun deliver(ctx: Context, work: File, file: File, destination: String?): OutputFile? {
+        val rel = relativeInside(work, file) ?: run {
+            AppLog.w("Arquivo fora da pasta do download recusado: ${file.name}")
+            return null
+        }
+        if (!file.isFile || file.length() == 0L) return null
         val mime = mimeOf(file.name)
         val dir = rel.substringBeforeLast('/', "")
         val out = runCatching {
@@ -115,12 +136,15 @@ object Storage {
         if (DocumentsContract.isDocumentUri(ctx, u)) DocumentsContract.deleteDocument(ctx.contentResolver, u) else ctx.contentResolver.delete(u, null, null) > 0
     }.getOrDefault(false)
 
+    /** Pacotes (.apk…) não são abertos pelo app: o Android trataria como instalação. */
+    fun canOpen(file: OutputFile) = !isPackage(file.name)
+
     fun viewIntent(file: OutputFile): Intent =
         Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(file.uri), file.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
 
     fun shareIntent(file: OutputFile): Intent =
         Intent.createChooser(
-            Intent(Intent.ACTION_SEND).setType(file.mime).putExtra(Intent.EXTRA_STREAM, Uri.parse(file.uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            Intent(Intent.ACTION_SEND).setType(if (isPackage(file.name)) "application/octet-stream" else file.mime).putExtra(Intent.EXTRA_STREAM, Uri.parse(file.uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
             "Compartilhar",
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

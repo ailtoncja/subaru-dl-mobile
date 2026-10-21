@@ -90,6 +90,7 @@ import com.subarudl.app.LinkJob
 import com.subarudl.app.MainViewModel
 import com.subarudl.app.R
 import com.subarudl.app.Section
+import com.subarudl.app.data.Storage
 import com.subarudl.app.ui.components.Gutter
 import com.subarudl.app.ui.components.sideFor
 import com.subarudl.app.util.extractLinks
@@ -167,7 +168,7 @@ fun HomeScreen(vm: MainViewModel, snackbar: SnackbarHostState) {
                 if (!searching) item(key = "bar") { LinkBar(vm, paste) }
                 if (groups.isEmpty) item(key = "empty") { if (query.isBlank()) EmptyState() else NoResults(query) }
                 else {
-                    downloadSections(vm, groups, actions = !searching, onDetails = { details = it }, onOpen = { it.outputs.firstOrNull()?.let { f -> openFile(ctx, vm, f) } ?: run { details = it.id } })
+                    downloadSections(vm, groups, actions = !searching, onDetails = { details = it }, onOpen = { it.outputs.firstOrNull()?.takeIf(Storage::canOpen)?.let { f -> openFile(ctx, vm, f) } ?: run { details = it.id } })
                     if (!searching) item(key = "storage") { StorageLine(items) }
                 }
             }

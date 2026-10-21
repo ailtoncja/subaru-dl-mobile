@@ -6,15 +6,29 @@ import com.subarudl.app.data.DownloadOptions
 import com.subarudl.app.data.Mode
 import com.subarudl.app.data.QueueItem
 import java.io.File
+import java.security.SecureRandom
 
 /** Monta os argumentos do yt-dlp a partir das opções da interface (espelha o app do PC). */
 object Args {
-    /** Marcadores que o motor procura na saída do yt-dlp. */
-    const val MARK_PROGRESS = "SUBARU_P "
-    const val MARK_POST = "SUBARU_PP "
-    const val MARK_FILE = "SUBARU_ARQ "
+    /**
+     * Marcadores que o motor procura na saída do yt-dlp. Levam um número aleatório novo a cada download: um título
+     * de vídeo ou de playlist (texto que vem do site) não consegue imitar uma linha do app sem saber esse número.
+     */
+    class Marks(nonce: String) {
+        val progress = "SUBARU_P_$nonce "
+        val post = "SUBARU_PP_$nonce "
+        val file = "SUBARU_ARQ_$nonce "
 
-    fun cookiesFile(ctx: Context) = File(ctx.filesDir, "cookies.txt")
+        companion object {
+            fun random(): Marks = Marks(ByteArray(12).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) })
+        }
+    }
+
+    /** cookies.txt fica na pasta que o Android nunca copia (backup e transferência para outro aparelho). */
+    fun cookiesFile(ctx: Context) = File(ctx.noBackupFilesDir, "cookies.txt")
+
+    /** Onde o cookies.txt ficava até a versão 1.5.0 (pasta comum do app). */
+    fun oldCookiesFile(ctx: Context) = File(ctx.filesDir, "cookies.txt")
 
     /** Certificados de autoridades (os mesmos do Python embutido), ou null se o motor ainda não foi preparado. */
     fun caCertificates(ctx: Context): File? =
@@ -115,17 +129,17 @@ object Args {
 
     // ---------- Download completo ----------
 
-    fun download(ctx: Context, item: QueueItem, s: AppSettings, workDir: File): List<String> {
+    fun download(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, marks: Marks): List<String> {
         val o = item.options
         val a = mutableListOf(
             "--color", "never",
             "--newline", "--progress", "--no-quiet", "--no-mtime",
             "--progress-template",
-            "download:$MARK_PROGRESS%(progress.status)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s|%(info.playlist_index)s|%(info.n_entries)s|%(info.vcodec)s|%(progress.fragment_index)s|%(progress.fragment_count)s",
+            "download:${marks.progress}%(progress.status)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s|%(info.playlist_index)s|%(info.n_entries)s|%(info.vcodec)s|%(progress.fragment_index)s|%(progress.fragment_count)s",
             "--progress-template",
-            "postprocess:$MARK_POST%(progress.status)s|%(progress.postprocessor)s|%(info.playlist_index)s",
+            "postprocess:${marks.post}%(progress.status)s|%(progress.postprocessor)s|%(info.playlist_index)s",
             "--print",
-            "after_move:$MARK_FILE%(.{id,title,channel,uploader,extractor_key,webpage_url,duration,height,fps,abr,ext,filepath,thumbnail,upload_date,playlist_title,view_count,like_count})j",
+            "after_move:${marks.file}%(.{id,title,channel,uploader,extractor_key,webpage_url,duration,height,fps,abr,ext,filepath,thumbnail,upload_date,playlist_title,view_count,like_count})j",
             "-P", "home:${workDir.absolutePath}",
             "-o", outputTemplate(s, o, item.isPlaylist),
         )
@@ -195,15 +209,41 @@ object Args {
         return a
     }
 
-    /** Esconde senhas e tokens antes de mostrar o comando nos logs. */
-    fun forLog(args: List<String>): String {
-        val sensitive = setOf("--password", "--video-password", "--add-headers", "--proxy", "--username", "--cookies")
-        return "yt-dlp " + args.mapIndexed { i, arg ->
-            when {
-                i > 0 && args[i - 1] in sensitive -> "••••"
-                Regex("\\s|\"").containsMatchIn(arg) -> "\"" + arg.replace("\"", "\\\"") + "\""
-                else -> arg
+    // ---------- Registro sem senhas ----------
+
+    /** Opções cujo valor (o argumento seguinte ou depois do "=") é segredo, no yt-dlp e no gallery-dl. */
+    private val secretOptions = setOf(
+        "--password", "-p", "--username", "-u", "--video-password", "--twofactor", "-2",
+        "--ap-password", "--ap-username", "--client-certificate-password",
+        "--add-headers", "--add-header", "--proxy", "--geo-verification-proxy", "--cookies", "--netrc-cmd",
+    )
+
+    /** Opções curtas que aceitam o valor colado: -pSENHA, -uNOME, -2CÓDIGO. */
+    private val secretShort = setOf('p', 'u', '2')
+
+    /** Tokens dentro de --extractor-args (po_token, visitor_data…) e de -o chave=valor do gallery-dl. */
+    private val secretKeys = Regex("""(?i)((?:po_token|visitor_data|data_sync_id|[\w.-]*(?:password|passwd|token|secret|api[_-]?key|cookies?|auth\w*))\s*[=:]\s*)([^;,\s][^;]*)""")
+
+    /** Usuário e senha dentro de um endereço: http://usuario:senha@proxy:8080 */
+    private val urlCredentials = Regex("""([a-zA-Z][a-zA-Z0-9+.-]*://)[^/@\s]+@""")
+
+    private val needsQuotes = Regex("[\\s\"]")
+
+    private fun maskText(text: String): String =
+        text.replace(urlCredentials, "$1••••@").replace(secretKeys) { m -> m.groupValues[1] + "••••" }
+
+    /** Esconde senhas, tokens e logins antes de mostrar um comando (yt-dlp ou gallery-dl) nos logs. */
+    fun forLog(tool: String, args: List<String>): String {
+        var hideNext = false
+        return tool + " " + args.joinToString(" ") { arg ->
+            val shown = when {
+                hideNext -> { hideNext = false; "••••" }
+                arg in secretOptions -> { hideNext = true; arg }
+                arg.startsWith("--") && arg.contains('=') && arg.substringBefore('=') in secretOptions -> arg.substringBefore('=') + "=••••"
+                arg.length > 2 && arg[0] == '-' && arg[1] in secretShort -> "-${arg[1]}••••"
+                else -> maskText(arg)
             }
-        }.joinToString(" ")
+            if (needsQuotes.containsMatchIn(shown)) "\"" + shown.replace("\"", "\\\"") + "\"" else shown
+        }
     }
 }

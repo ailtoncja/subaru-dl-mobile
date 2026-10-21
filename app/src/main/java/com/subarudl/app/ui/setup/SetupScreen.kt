@@ -276,10 +276,8 @@ private fun AccountsStep(vm: MainViewModel) {
     var login by remember { mutableStateOf(false) }
     var receive by remember { mutableStateOf(false) }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            val r = Cookies.importFile(ctx, uri)
-            vm.toast(if (r.cookies > 0) "${r.cookies} cookies de ${r.sites} sites importados" else "Esse arquivo não parece um cookies.txt")
-        }
+        // Escolhido pela própria pessoa no seletor: grava sem perguntar (com as mesmas conferências)
+        if (uri != null) vm.importCookies(uri, confirm = false)
     }
     val scheme = MaterialTheme.colorScheme
 

@@ -1,6 +1,7 @@
 package com.subarudl.app.data
 
 import android.util.Log
+import com.subarudl.app.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +18,8 @@ object AppLog {
 
     @Synchronized
     fun add(level: LogLevel, text: String, itemId: String? = null) {
-        Log.println(
+        // No logcat só no build de testes: no app publicado o registro fica só na tela Registro
+        if (BuildConfig.DEBUG) Log.println(
             when (level) {
                 LogLevel.ERROR -> Log.ERROR
                 LogLevel.WARN -> Log.WARN

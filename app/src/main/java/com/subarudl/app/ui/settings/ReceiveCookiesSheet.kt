@@ -26,10 +26,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +41,7 @@ import com.subarudl.app.data.CookieReceiver
 import com.subarudl.app.data.Cookies
 import com.subarudl.app.ui.components.Gutter
 import com.subarudl.app.ui.theme.tabular
+import kotlinx.coroutines.delay
 
 /**
  * Receber o cookies.txt do Subaru DL do PC pelo Wi-Fi: o celular escuta enquanto esta folha está aberta e mostra o código
@@ -59,6 +64,15 @@ fun ReceiveCookiesSheet(onDone: (Cookies.Imported) -> Unit, onDismiss: () -> Uni
         }
     }
     LaunchedEffect(state) { (state as? CookieReceiver.State.Done)?.let { onDone(it.imported) } }
+    // Segundos até o código expirar, para a contagem na tela
+    var remaining by remember { mutableLongStateOf(CookieReceiver.LIFETIME_MS / 1000) }
+    LaunchedEffect(state) {
+        val w = state as? CookieReceiver.State.Waiting ?: return@LaunchedEffect
+        while (true) {
+            remaining = ((w.expiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            delay(1000)
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = Gutter).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -71,9 +85,15 @@ fun ReceiveCookiesSheet(onDone: (Cookies.Imported) -> Unit, onDismiss: () -> Uni
                     )
                     Card(colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerHigh)) {
                         Text("Código", Modifier.padding(start = 16.dp, top = 12.dp), style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                        // 16 letras em quatro blocos (XXXX-XXXX-XXXX-XXXX): letra fixa para os blocos ficarem alinhados
                         Text(
-                            CookieReceiver.pretty(s.code), Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 4.dp),
-                            style = MaterialTheme.typography.displaySmall.tabular.copy(letterSpacing = 4.sp), color = scheme.primary, textAlign = TextAlign.Center,
+                            CookieReceiver.pretty(s.code), Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(bottom = 4.dp, top = 4.dp),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Monospace, letterSpacing = 1.sp),
+                            color = scheme.primary, textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                        )
+                        Text(
+                            "Vale por mais ${remaining / 60}:${"%02d".format(remaining % 60)}", Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            style = MaterialTheme.typography.bodySmall.tabular, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
                         )
                     }
                     if (s.addresses.isEmpty()) {
@@ -92,6 +112,13 @@ fun ReceiveCookiesSheet(onDone: (Cookies.Imported) -> Unit, onDismiss: () -> Uni
                 }
                 is CookieReceiver.State.Failed -> {
                     Text(s.message, style = MaterialTheme.typography.bodyMedium, color = scheme.error)
+                    Button({ CookieReceiver.start(ctx) }, Modifier.fillMaxWidth()) { Text("Gerar outro código") }
+                }
+                CookieReceiver.State.Expired -> {
+                    Text(
+                        "O código expirou: o recebimento fica aberto por 5 minutos e foi fechado. Gere outro código quando o PC estiver pronto.",
+                        style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant,
+                    )
                     Button({ CookieReceiver.start(ctx) }, Modifier.fillMaxWidth()) { Text("Gerar outro código") }
                 }
                 else -> Unit

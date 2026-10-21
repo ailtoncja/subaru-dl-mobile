@@ -11,19 +11,29 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cookie
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.subarudl.app.MainViewModel
 import com.subarudl.app.Screen
+import com.subarudl.app.data.Cookies
 import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.ui.home.HomeScreen
 import com.subarudl.app.ui.settings.SettingsScreen
@@ -89,4 +99,29 @@ fun AppRoot(vm: MainViewModel) {
             }
         }
     }
+    vm.pendingCookies?.let { CookiesConfirmDialog(it, onConfirm = vm::confirmCookies, onDismiss = vm::dismissCookies) }
+}
+
+/** cookies.txt vindo de outro app: diz o que vai entrar e só grava com o "Importar". */
+@Composable
+private fun CookiesConfirmDialog(parsed: Cookies.Parsed, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val sites = parsed.domains
+    val list = sites.take(6).joinToString(", ") + if (sites.size > 6) " e mais ${sites.size - 6}" else ""
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.Cookie, null) },
+        title = { Text("Importar cookies?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${parsed.count} ${if (parsed.count == 1) "cookie" else "cookies"} de ${sites.size} ${if (sites.size == 1) "site" else "sites"}: $list.")
+                Text("Eles substituem os cookies que o app já tem desses sites. Só importe um arquivo que você mesmo exportou.")
+                if (parsed.ignored > 0) Text(
+                    "${parsed.ignored} ${if (parsed.ignored == 1) "linha inválida fica" else "linhas inválidas ficam"} de fora.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onConfirm) { Text("Importar") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancelar") } },
+    )
 }

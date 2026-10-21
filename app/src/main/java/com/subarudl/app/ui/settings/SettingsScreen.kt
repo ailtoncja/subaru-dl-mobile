@@ -1,8 +1,11 @@
 package com.subarudl.app.ui.settings
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
+import android.os.PersistableBundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -513,10 +516,8 @@ private fun AccountsPage(vm: MainViewModel, snackbar: SnackbarHostState, onBack:
     var login by remember { mutableStateOf(false) }
     var receive by remember { mutableStateOf(false) }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            val r = Cookies.importFile(ctx, uri)
-            vm.toast(if (r.cookies > 0) "${r.cookies} cookies de ${r.sites} sites importados" else "Esse arquivo não parece um cookies.txt")
-        }
+        // Escolhido pela própria pessoa no seletor: grava sem perguntar (com as mesmas conferências)
+        if (uri != null) vm.importCookies(uri, confirm = false)
     }
     val scheme = MaterialTheme.colorScheme
     Page("Contas e cookies", snackbar, onBack) {
@@ -575,7 +576,10 @@ private fun LogsPage(snackbar: SnackbarHostState, onBack: () -> Unit) {
         "Registro", snackbar, onBack,
         actions = {
             IconButton({
-                (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("registro", AppLog.asText()))
+                // Marcado como sensível: o Android não mostra o conteúdo na prévia da área de transferência
+                val clip = ClipData.newPlainText("registro", AppLog.asText())
+                if (Build.VERSION.SDK_INT >= 33) clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
+                (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
             }) { Icon(Icons.Outlined.ContentCopy, "Copiar o registro") }
             IconButton({ AppLog.clear() }) { Icon(Icons.Outlined.DeleteOutline, "Limpar o registro") }
         },

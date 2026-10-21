@@ -12,6 +12,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.subarudl.app.R
 import com.subarudl.app.SubaruApp
+import com.subarudl.app.data.AppLog
 import com.subarudl.app.data.SettingsStore
 import com.subarudl.app.data.Status
 import com.subarudl.app.util.formatSpeed
@@ -100,6 +101,19 @@ class DownloadService : Service() {
 
     private fun notify(n: Notification) {
         runCatching { getSystemService(NotificationManager::class.java).notify(Notifier.ID_FOREGROUND, n) }
+    }
+
+    /**
+     * Android 15+: o serviço de sincronização (dataSync) tem um limite de horas por dia. Quando ele acaba, o Android
+     * avisa aqui e derrubaria o app se o serviço continuasse: pausa tudo (o progresso fica guardado) e sai.
+     */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        AppLog.w("O Android encerrou o tempo de downloads em segundo plano de hoje: tudo foi pausado. Toque em retomar para continuar.")
+        runCatching { (application as SubaruApp).manager.pauseAll() }
+        observer?.cancel()
+        observer = null
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        stopSelf()
     }
 
     override fun onDestroy() {

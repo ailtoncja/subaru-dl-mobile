@@ -361,15 +361,17 @@ class DownloadManager(private val app: Application) {
         var quality = item.quality
         var ext = item.ext
 
+        // Número novo a cada download: só as linhas com ele são do próprio app (veja Args.Marks)
+        val marks = Args.Marks.random()
+
         fun deliver(file: File) {
-            val rel = file.relativeTo(work).invariantSeparatorsPath
-            Storage.deliver(app, file, rel, item.options.destination)?.let { delivered += it }
+            Storage.deliver(app, work, file, item.options.destination)?.let { delivered += it }
         }
 
         val onLine: (String) -> Unit = { line ->
             when {
-                line.startsWith(Args.MARK_PROGRESS) -> {
-                    val p = line.removePrefix(Args.MARK_PROGRESS).split("|")
+                line.startsWith(marks.progress) -> {
+                    val p = line.removePrefix(marks.progress).split("|")
                     val status = p.getOrNull(0)
                     val downloaded = num(p.getOrNull(1))
                     val total = num(p.getOrNull(2)) ?: num(p.getOrNull(3))
@@ -403,17 +405,17 @@ class DownloadManager(private val app: Application) {
                         }
                     }
                 }
-                line.startsWith(Args.MARK_POST) -> {
-                    val p = line.removePrefix(Args.MARK_POST).split("|")
+                line.startsWith(marks.post) -> {
+                    val p = line.removePrefix(marks.post).split("|")
                     if (p.getOrNull(0) == "started") {
                         val stage = postStage(p.getOrNull(1) ?: "")
                         val multi = (item(id)?.itemCount ?: 0) > 1 && item.isPlaylist
                         mutate(id, persist = false) { x -> x.copy(status = if (multi) Status.DOWNLOADING else Status.PROCESSING, stage = stage, speed = 0.0, eta = -1) }
                     }
                 }
-                line.startsWith(Args.MARK_FILE) -> {
+                line.startsWith(marks.file) -> {
                     runCatching {
-                        val j = JSONObject(line.removePrefix(Args.MARK_FILE))
+                        val j = JSONObject(line.removePrefix(marks.file))
                         val path = j.optString("filepath")
                         val height = j.optInt("height").takeIf { it > 0 }
                         val fps = j.optDouble("fps", 0.0)
@@ -430,7 +432,8 @@ class DownloadManager(private val app: Application) {
                                 quality = quality, ext = ext,
                             )
                         }
-                        if (item.isPlaylist && path.isNotEmpty()) File(path).takeIf { it.exists() }?.let(::deliver)
+                        // Só arquivos de dentro da pasta deste download (o Storage.deliver confere de novo)
+                        if (item.isPlaylist && path.isNotEmpty()) File(path).takeIf { it.isFile && Storage.relativeInside(work, it) != null }?.let(::deliver)
                     }
                 }
                 line.startsWith("[#") && aria2Line.containsMatchIn(line.trim()) -> {
@@ -461,7 +464,7 @@ class DownloadManager(private val app: Application) {
         }
 
         try {
-            Ytdlp.download(app, item, s, work, onLine)
+            Ytdlp.download(app, item, s, work, marks, onLine)
         } catch (e: YoutubeDL.CanceledException) {
             return // pausado, sem Wi-Fi ou removido: a pasta de trabalho fica para continuar depois
         } catch (e: EngineException) {
@@ -537,9 +540,8 @@ class DownloadManager(private val app: Application) {
                         val path = (if (skip) line.drop(2) else line).trim()
                         if (skip) skipped++ else {
                             val f = File(path)
-                            if (f.exists() && f.canonicalPath.startsWith(work.canonicalPath)) {
-                                val rel = f.relativeTo(work).invariantSeparatorsPath
-                                val out = Storage.deliver(app, f, rel, dest)
+                            if (f.isFile && Storage.relativeInside(work, f) != null) {
+                                val out = Storage.deliver(app, work, f, dest)
                                 if (out != null) {
                                     files++
                                     if (out.mime.startsWith("image/") && samples.size < 8) samples += out
@@ -578,7 +580,7 @@ class DownloadManager(private val app: Application) {
 
         // Termina: arquivos que sobraram na pasta de trabalho também são entregues
         work.walkTopDown().filter { it.isFile && !Storage.isTemp(it.name) }.forEach { f ->
-            Storage.deliver(app, f, f.relativeTo(work).invariantSeparatorsPath, dest)?.let { files++ }
+            Storage.deliver(app, work, f, dest)?.let { files++ }
         }
         work.deleteRecursively()
         val nothing = files == 0 && skipped == 0

@@ -45,7 +45,7 @@ object Ytdlp {
     /** Lê as informações do link (vídeo único ou lista de itens, sem baixar nada). */
     fun fetchInfo(ctx: Context, url: String, s: AppSettings, trackId: String? = null): MediaInfo {
         val args = listOf("--color", "never", "-J", "--flat-playlist", "--no-warnings") + Args.network(ctx, s) + "--"
-        AppLog.cmd(Args.forLog(args) + " " + url, trackId)
+        AppLog.cmd(Args.forLog("yt-dlp", args + url), trackId)
         val req = YoutubeDLRequest(url).addCommands(args)
         val response = try {
             Engine.shared { YoutubeDL.execute(req, "info-" + UUID.randomUUID()) }
@@ -67,20 +67,20 @@ object Ytdlp {
     }
 
     /** Roda o download. Cada linha de saída vai para [onLine]. Lança [EngineException] em caso de erro. */
-    fun download(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, onLine: (String) -> Unit) {
+    fun download(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, marks: Args.Marks, onLine: (String) -> Unit) {
         try {
-            runDownload(ctx, item, s, workDir, onLine)
+            runDownload(ctx, item, s, workDir, marks, onLine)
         } catch (e: EngineException) {
             // O Turbo (aria2) é um extra: se ele falhar, o download continua do jeito normal em vez de dar erro
             if (!s.turbo || e.message?.contains("aria2c", ignoreCase = true) != true) throw e
             AppLog.w("O Turbo (aria2) falhou (${e.message}). Baixando sem ele.", item.id)
-            runDownload(ctx, item, s.copy(turbo = false), workDir, onLine)
+            runDownload(ctx, item, s.copy(turbo = false), workDir, marks, onLine)
         }
     }
 
-    private fun runDownload(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, onLine: (String) -> Unit) {
-        val args = Args.download(ctx, item, s, workDir)
-        AppLog.cmd(Args.forLog(args) + " " + item.url, item.id)
+    private fun runDownload(ctx: Context, item: QueueItem, s: AppSettings, workDir: File, marks: Args.Marks, onLine: (String) -> Unit) {
+        val args = Args.download(ctx, item, s, workDir, marks)
+        AppLog.cmd(Args.forLog("yt-dlp", args + item.url), item.id)
         val req = YoutubeDLRequest(item.url).addCommands(args)
         val response = try {
             Engine.shared { YoutubeDL.execute(req, item.id) { _, _, line -> onLine(line) } }

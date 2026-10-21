@@ -40,14 +40,23 @@ Sem pedir nenhuma permissão: vídeos em `Filmes/Subaru DL`, áudios em `Música
   (que resolve o JavaScript do YouTube no lugar do Deno).
 - O **gallery-dl** vai num zip em `assets/gallerydl.zip` (Python puro + `requests`) e roda no mesmo Python.
 - O yt-dlp se atualiza sozinho (a cada 12 h, ao abrir) e pelo botão em Ajustes. Uma trava impede atualizar enquanto algo
-  está sendo baixado ou lido.
-- O download acontece numa pasta de trabalho do app e cada arquivo é entregue ao destino quando termina.
+  está sendo baixado ou lido. O app baixa da Release do canal escolhido (estável, nightly ou master) o `SHA2-256SUMS`, confere
+  a assinatura dele (`SHA2-256SUMS.sig`) com a chave oficial do yt-dlp embutida no app (`engine/OpenPgp.kt`, impressão
+  digital `AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581`) e só troca o arquivo se o SHA-256 do `yt-dlp` baixado bater.
+- O gallery-dl se atualiza pelo PyPI: só aceita o pacote de `files.pythonhosted.org` com o SHA-256 que o PyPI informa.
+- O download acontece numa pasta de trabalho do app e cada arquivo é entregue ao destino quando termina. Só arquivos de
+  dentro dessa pasta são entregues; as linhas que o app lê na saída do yt-dlp levam um número aleatório novo a cada
+  download, para um título de vídeo não conseguir se passar por elas. Pacotes de instalação (`.apk`, `.apks`, `.xapk`,
+  `.apkm`) são salvos como arquivo comum e o app não oferece abri-los.
+- O `cookies.txt` fica na pasta interna sem backup do app; nada do app vai para o backup na nuvem nem para a
+  transferência de um celular para outro.
 
 ```
 app/src/main/java/com/subarudl/app/
   SubaruApp.kt, MainActivity.kt, MainViewModel.kt
   data/      modelos, configurações, armazenamento (MediaStore/SAF), cookies, logs
-  engine/    Args (monta o comando do yt-dlp), Ytdlp, GalleryDl, InfoParser, Engine
+  engine/    Args (monta o comando do yt-dlp), Ytdlp, GalleryDl, InfoParser, Engine,
+             YtdlpUpdater + OpenPgp (atualização do yt-dlp com a assinatura conferida)
   service/   DownloadManager (a fila), DownloadService (primeiro plano), Notifier, AppUpdater (versão nova do app)
   ui/        AppRoot (telas e voltar), theme, components,
              home (tela principal, lista, folhas de link e de detalhes), settings (Ajustes, login, receber cookies)
@@ -60,7 +69,7 @@ app/src/main/assets/gallerydl.zip
 export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
 export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=C:/Users/Administrator/jt -Djdk.net.unixdomain.tmpdir=C:/Users/Administrator/jt"
 ./gradlew.bat :app:assembleDebug          # APK de teste
-./gradlew.bat :app:assembleRelease        # APK assinado (usa keystore.properties + subaru-dl.jks)
+./gradlew.bat :app:assembleRelease        # APK assinado (exige keystore.properties + subaru-dl.jks; sem eles o build para)
 emulator -avd Medium_Phone_API_37.0 -no-snapshot-save
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "https://youtu.be/..." -n com.subarudl.app/.MainActivity
@@ -74,11 +83,14 @@ instalado depois.
 
 ## Receber cookies do PC (como funciona)
 
-Enquanto a tela "Receber do PC" está aberta, o celular escuta na porta 38475 e mostra um código de 8 letras. O PC varre a
-rede local procurando essa porta (`GET /subaru`, que devolve um "sal"), deriva uma chave do código (PBKDF2-SHA256, 120 mil
-voltas), cifra o `cookies.txt` com AES-256-GCM e envia (`POST /cookies`). Sem o código certo nada é aceito; depois de 5
-tentativas erradas o celular fecha o recebimento; os cookies não viajam em texto puro. O receptor só existe com a tela
-aberta. O código está em `data/CookieReceiver.kt` (celular) e `src/main/celular.ts` (PC).
+Enquanto a tela "Receber do PC" está aberta, o celular escuta na porta 38475 e mostra um código de 16 letras em quatro
+blocos (`XXXX-XXXX-XXXX-XXXX`, cerca de 80 bits; o PC ignora os traços). O PC varre a rede local procurando essa porta
+(`GET /subaru`, que devolve um "sal" e o nome do modelo), deriva uma chave do código (PBKDF2-SHA256, 120 mil voltas), cifra o
+`cookies.txt` com AES-256-GCM e envia (`POST /cookies`). Sem o código certo nada é aceito; depois de 5 tentativas erradas o
+celular fecha o recebimento; os cookies não viajam em texto puro. O receptor só existe com a tela aberta e fecha sozinho
+depois de 5 minutos (a tela mostra o tempo que falta e o botão **Gerar outro código**). Só atende aparelhos da rede local
+(endereços privados, de enlace ou o próprio celular), e cada conexão tem 10 segundos para mandar o pedido inteiro. O código
+está em `data/CookieReceiver.kt` (celular) e `src/main/celular.ts` (PC).
 
 Teste no emulador: `adb forward tcp:38475 tcp:38475`; o PC acha o emulador em 127.0.0.1.
 
@@ -104,8 +116,9 @@ Igual ao PC: ao abrir (no máximo a cada 6 horas) o app consulta a Release mais 
 
 - no Wi-Fi, baixa o APK sozinho, em silêncio, pelo gerenciador de downloads do Android; nos dados móveis só avisa, com o
   tamanho e o botão **Baixar**;
-- confere o arquivo antes de oferecer: tamanho, soma SHA-256 (o GitHub publica a de cada arquivo), se é mesmo o Subaru DL,
-  se é mais novo e se foi assinado pela mesma chave;
+- copia o APK para a pasta interna do app e confere essa cópia antes de oferecer: tamanho, soma SHA-256 (o GitHub publica a
+  de cada arquivo), se é mesmo o Subaru DL, se é mais novo e se foi assinado pela mesma chave (sem assinatura legível,
+  recusa); na hora de instalar, confere de novo o tamanho e o SHA-256 dos bytes que entram no instalador;
 - mostra o aviso no alto da tela principal ("Versão 1.4.0 pronta para instalar") e, com o app fechado, uma notificação;
 - ao tocar em **Instalar**, avisa se há downloads em andamento (eles param e continuam quando o app voltar), pede uma vez a
   permissão do Android "Instalar apps desconhecidos" e instala por cima com o `PackageInstaller`. Como o app atualiza a si
@@ -119,10 +132,12 @@ Quem está na 1.3.0 ou antes precisa instalar a 1.4.0 à mão uma vez (essas ver
 (`gh release create v<versão> dist/SubaruDL-<versão>.apk --title <versão> --notes-file dist/notas-<versão>.md`). Nas notas, o
 que vem antes de uma linha `---` aparece no app em "Novidades"; o que vem depois (como instalar pelo site) só no GitHub.
 
-**Testar sem publicar:** compile com `-PupdateApi=http://127.0.0.1:8765/latest.json -PupdateOrigin=http://127.0.0.1:8765/
--PtestVersionName=1.3.98 -PtestVersionCode=100` (e outra versão maior para servir), sirva a pasta com um `latest.json` no
-formato da API do GitHub (`python -m http.server 8765`) e use `adb reverse tcp:8765 tcp:8765`. O endereço 10.0.2.2 não
-serve: o Android 17 bloqueia a rede local para os apps; o loopback do aparelho passa.
+**Testar sem publicar:** compile o build Debug (`assembleDebug`) com `-PupdateApi=http://127.0.0.1:8765/latest.json
+-PupdateOrigin=http://127.0.0.1:8765/ -PtestVersionName=1.3.98 -PtestVersionCode=100` (e outra versão maior para servir),
+sirva a pasta com um `latest.json` no formato da API do GitHub (`python -m http.server 8765`) e use
+`adb reverse tcp:8765 tcp:8765`. O build Release recusa essas opções. O endereço 10.0.2.2 não serve: o Android 17 bloqueia
+a rede local para os apps; o loopback do aparelho passa (é o único endereço em `http` que o app aceita, veja
+`res/xml/network_security_config.xml`).
 
 ## Diferenças em relação ao PC
 
@@ -132,7 +147,11 @@ serve: o Android 17 bloqueia a rede local para os apps; o loopback do aparelho p
   1. login numa janela dentro do app;
   2. **Receber do PC pelo Wi-Fi**: o Subaru DL do computador gera o `cookies.txt` a partir do navegador e envia ao celular
      (Ajustes → Contas e cookies → Receber do PC; no PC, Configurações → Rede e login → Enviar para o celular);
-  3. importar um `cookies.txt`, ou abrir/compartilhar o arquivo com o Subaru DL (WhatsApp, Telegram, Drive, USB).
+  3. importar um `cookies.txt`, ou abrir/compartilhar o arquivo com o Subaru DL (WhatsApp, Telegram, Drive, USB). Vindo de
+     outro app, o Subaru DL lê o arquivo (até 2 MB) e pergunta antes de gravar ("Importar cookies?", com quantos cookies e
+     de quais sites; eles substituem os desses sites). Cookies para um sufixo público inteiro (`.com`, `com.br`,
+     `github.io`) são ignorados. No login dentro do app, os sites conhecidos (YouTube/Google, Instagram, X, TikTok…) valem
+     para o domínio todo; os outros ficam presos ao endereço exato.
 - Baixar com o app fechado exige a notificação fixa de progresso.
 - Não vai para a Play Store (política do Google contra baixadores do YouTube): instalação por APK.
 

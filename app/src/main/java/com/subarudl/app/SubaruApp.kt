@@ -8,6 +8,7 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import com.subarudl.app.data.Cookies
 import com.subarudl.app.data.SettingsStore
 import com.subarudl.app.service.AppUpdater
 import com.subarudl.app.service.DownloadManager
@@ -20,6 +21,8 @@ class SubaruApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         SettingsStore.init(this)
+        // cookies.txt da pasta antiga para a pasta sem backup (uma vez só)
+        Cookies.migrate(this)
         Notifier.createChannels(this)
         manager = DownloadManager(this)
         manager.start()

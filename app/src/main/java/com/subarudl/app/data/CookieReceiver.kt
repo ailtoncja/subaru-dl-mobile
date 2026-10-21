@@ -6,14 +6,17 @@ import android.util.Base64
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import java.io.OutputStream
 import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.security.SecureRandom
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -25,10 +28,11 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * Recebe o cookies.txt do Subaru DL do computador, pelo Wi-Fi.
  *
- * Enquanto a tela "Receber do PC" está aberta, o celular escuta numa porta e mostra um código de 8 letras.
- * O PC acha o celular na rede, pede o "sal" (GET /subaru), cifra os cookies com AES-256-GCM usando uma chave
- * derivada do código (PBKDF2) e manda (POST /cookies). Sem o código certo nada é aceito, e depois de
- * [MAX_ATTEMPTS] tentativas erradas o receptor fecha. Os cookies nunca trafegam em texto puro.
+ * Enquanto a tela "Receber do PC" está aberta (no máximo [LIFETIME_MS]), o celular escuta numa porta e mostra um
+ * código de 16 letras (~80 bits). O PC acha o celular na rede, pede o "sal" (GET /subaru), cifra os cookies com
+ * AES-256-GCM usando uma chave derivada do código (PBKDF2) e manda (POST /cookies). Sem o código certo nada é aceito,
+ * e depois de [MAX_ATTEMPTS] tentativas erradas o receptor fecha. Os cookies nunca trafegam em texto puro, e só
+ * aparelhos da rede local (ou o próprio celular) conseguem conversar com o receptor.
  */
 object CookieReceiver {
     const val PORT = 38475
@@ -36,12 +40,22 @@ object CookieReceiver {
     private const val ITERATIONS = 120_000
     private const val MAX_BODY = 2 * 1024 * 1024
     private const val MAX_ATTEMPTS = 5
+    const val CODE_LENGTH = 16
+
+    /** O receptor fecha sozinho depois de 5 minutos. */
+    const val LIFETIME_MS = 5 * 60_000L
+
+    /** Tempo total para uma conexão mandar o pedido inteiro (não só entre um pedaço e outro). */
+    private const val REQUEST_DEADLINE_MS = 10_000L
 
     sealed interface State {
         data object Off : State
-        data class Waiting(val code: String, val addresses: List<String>, val port: Int) : State
+        /** [expiresAt] no relógio de [System.currentTimeMillis]. */
+        data class Waiting(val code: String, val addresses: List<String>, val port: Int, val expiresAt: Long) : State
         data class Done(val imported: Cookies.Imported) : State
         data class Failed(val message: String) : State
+        /** Passaram os 5 minutos sem o PC mandar nada. */
+        data object Expired : State
     }
 
     private val _state = MutableStateFlow<State>(State.Off)
@@ -50,15 +64,15 @@ object CookieReceiver {
     private var server: ServerSocket? = null
     private var attempts = 0
 
-    /** Código na tela, em dois blocos de quatro para ficar fácil de digitar. */
-    fun pretty(code: String) = code.chunked(4).joinToString("  ")
+    /** Código na tela, em blocos de quatro para ficar fácil de digitar: XXXX-XXXX-XXXX-XXXX. */
+    fun pretty(code: String) = code.chunked(4).joinToString("-")
 
     @Synchronized
     fun start(ctx: Context) {
         stop()
         val app = ctx.applicationContext
         val random = SecureRandom()
-        val code = buildString { repeat(8) { append(ALPHABET[random.nextInt(ALPHABET.length)]) } }
+        val code = buildString { repeat(CODE_LENGTH) { append(ALPHABET[random.nextInt(ALPHABET.length)]) } }
         val salt = ByteArray(16).also { random.nextBytes(it) }
         val socket = bind() ?: run {
             _state.value = State.Failed("Não consegui abrir a porta para receber. Feche e abra esta tela de novo.")
@@ -66,8 +80,9 @@ object CookieReceiver {
         }
         server = socket
         attempts = 0
-        _state.value = State.Waiting(code, localAddresses(), socket.localPort)
-        Thread({ serve(app, socket, code, salt) }, "cookie-receiver").apply { isDaemon = true; start() }
+        val expiresAt = System.currentTimeMillis() + LIFETIME_MS
+        _state.value = State.Waiting(code, localAddresses(), socket.localPort, expiresAt)
+        Thread({ serve(app, socket, code, salt, expiresAt) }, "cookie-receiver").apply { isDaemon = true; start() }
     }
 
     @Synchronized
@@ -110,18 +125,37 @@ object CookieReceiver {
             .distinct()
     }.getOrDefault(emptyList())
 
+    /** Endereços privados (10.x, 172.16-31.x, 192.168.x), de enlace (169.254.x, fe80::), IPv6 local (fc00::/7) ou o próprio aparelho. */
+    private fun isLocal(a: InetAddress?): Boolean {
+        a ?: return false
+        if (a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress) return true
+        return a is Inet6Address && (a.address[0].toInt() and 0xFE) == 0xFC
+    }
+
     // ---------- Servidor ----------
 
-    private fun serve(app: Context, socket: ServerSocket, code: String, salt: ByteArray) {
+    private fun serve(app: Context, socket: ServerSocket, code: String, salt: ByteArray, expiresAt: Long) {
         val key = runCatching { deriveKey(code, salt) }.getOrElse {
             finish(socket, State.Failed("Este aparelho não conseguiu preparar a criptografia."))
             return
         }
+        // accept() acorda a cada segundo para conferir se o tempo do código acabou
+        runCatching { socket.soTimeout = 1000 }
         while (!socket.isClosed) {
-            val client = try { socket.accept() } catch (_: Exception) { break }
+            if (System.currentTimeMillis() >= expiresAt) {
+                finish(socket, State.Expired)
+                return
+            }
+            val client = try {
+                socket.accept()
+            } catch (_: SocketTimeoutException) {
+                continue
+            } catch (_: Exception) {
+                break
+            }
             try {
-                client.soTimeout = 5000
-                if (handle(app, socket, client, key, salt)) break
+                // Só a rede local (Wi-Fi, ponto de acesso, cabo) ou o próprio celular; o resto é desligado na hora
+                if (isLocal(client.inetAddress) && handle(app, socket, client, key, salt)) break
             } catch (_: Exception) {
             } finally {
                 runCatching { client.close() }
@@ -138,7 +172,8 @@ object CookieReceiver {
     /** Atende uma conexão. Devolve true quando o receptor deve fechar (recebeu, ou tentativas demais). */
     private fun handle(app: Context, owner: ServerSocket, client: Socket, key: SecretKeySpec, salt: ByteArray): Boolean {
         val out = client.getOutputStream()
-        val req = try { readRequest(client.getInputStream()) } catch (_: TooBig) {
+        val deadline = System.nanoTime() + REQUEST_DEADLINE_MS * 1_000_000
+        val req = try { readRequest(client, deadline) } catch (_: TooBig) {
             respond(out, 413, JSONObject().put("ok", false).put("erro", "grande"))
             return false
         } ?: run {
@@ -147,6 +182,7 @@ object CookieReceiver {
         }
         when {
             req.method == "GET" && req.path == "/subaru" -> {
+                // Só o necessário: o nome do modelo é o que o PC mostra para escolher o celular
                 respond(out, 200, JSONObject().put("app", "subaru-dl").put("v", 1).put("nome", Build.MODEL ?: "Android").put("sal", Base64.encodeToString(salt, Base64.NO_WRAP)).put("iteracoes", ITERATIONS))
             }
             req.method == "POST" && req.path == "/cookies" -> {
@@ -179,10 +215,19 @@ object CookieReceiver {
         return false
     }
 
-    private fun readRequest(input: InputStream): Request? {
+    /** Ajusta a espera da próxima leitura ao que falta do prazo; passou do prazo, a conexão cai (contra quem manda um byte por vez). */
+    private fun untilDeadline(socket: Socket, deadline: Long) {
+        val left = (deadline - System.nanoTime()) / 1_000_000
+        if (left <= 0) throw SocketTimeoutException("prazo")
+        socket.soTimeout = left.toInt().coerceAtLeast(1)
+    }
+
+    private fun readRequest(socket: Socket, deadline: Long): Request? {
+        val input = BufferedInputStream(socket.getInputStream())
         val head = ByteArrayOutputStream()
         var last4 = 0
         while (true) {
+            untilDeadline(socket, deadline)
             val b = input.read()
             if (b < 0) return null
             head.write(b)
@@ -201,6 +246,7 @@ object CookieReceiver {
         val body = ByteArray(length)
         var read = 0
         while (read < length) {
+            untilDeadline(socket, deadline)
             val n = input.read(body, read, length - read)
             if (n < 0) return null
             read += n

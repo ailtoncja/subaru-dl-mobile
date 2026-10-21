@@ -63,24 +63,18 @@ object Engine {
         }
     }
 
-    private fun channel(): YoutubeDL.UpdateChannel = when (SettingsStore.value.updateChannel) {
-        "nightly" -> YoutubeDL.UpdateChannel.NIGHTLY
-        "master" -> YoutubeDL.UpdateChannel.MASTER
-        else -> YoutubeDL.UpdateChannel.STABLE
-    }
-
-    /** Atualiza o yt-dlp. Devolve uma frase para mostrar ao usuário. */
+    /** Atualiza o yt-dlp (com a assinatura oficial e o SHA-256 conferidos, veja [YtdlpUpdater]). Devolve uma frase para mostrar ao usuário. */
     fun updateYtdlp(ctx: Context, waitSeconds: Long = 20): String {
         // Só atualiza quando ninguém está usando o yt-dlp
         if (!gate.writeLock().tryLock(waitSeconds, TimeUnit.SECONDS)) return "Há downloads em andamento. Atualize quando terminarem."
         _state.value = _state.value.copy(updating = true)
         return try {
             val before = YoutubeDL.version(ctx)
-            val status = YoutubeDL.updateYoutubeDL(ctx, channel())
-            val after = YoutubeDL.version(ctx)
+            val result = YtdlpUpdater.update(ctx, SettingsStore.value.updateChannel)
+            val after = YoutubeDL.version(ctx) ?: result.version
             _state.value = _state.value.copy(updating = false, ytdlp = after)
-            AppLog.i("yt-dlp: $status ($before → $after)")
-            if (status == YoutubeDL.UpdateStatus.ALREADY_UP_TO_DATE) "O yt-dlp já está na versão mais nova ($after)" else "yt-dlp atualizado para $after"
+            AppLog.i("yt-dlp: ${if (result.updated) "atualizado, assinatura e SHA-256 conferidos" else "já atualizado"} ($before → $after)")
+            if (!result.updated) "O yt-dlp já está na versão mais nova ($after)" else "yt-dlp atualizado para $after"
         } catch (e: Throwable) {
             _state.value = _state.value.copy(updating = false)
             AppLog.e("Falha ao atualizar o yt-dlp: ${e.message}")

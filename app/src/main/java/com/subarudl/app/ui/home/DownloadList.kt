@@ -274,6 +274,11 @@ fun Bar(progress: Float, modifier: Modifier = Modifier, indeterminate: Boolean =
 // ---------- Detalhes de um item ----------
 
 fun openFile(ctx: Context, vm: MainViewModel, f: OutputFile) {
+    // Pacote de instalação (.apk…): o app não abre; dá para compartilhar ou achar na pasta Download
+    if (!Storage.canOpen(f)) {
+        vm.toast("Pacotes de instalação não são abertos pelo app")
+        return
+    }
     if (!Storage.exists(ctx, f.uri)) {
         vm.toast("O arquivo não está mais lá: foi movido ou apagado")
         return
@@ -352,7 +357,7 @@ fun ItemSheet(vm: MainViewModel, id: String, onDismiss: () -> Unit) {
                         )
                         if (it.error != null) Text(it.error, style = MaterialTheme.typography.bodyMedium, color = scheme.tertiary)
                         if (first != null) Actions {
-                            Button({ openFile(ctx, vm, first) }) { Icon(Icons.Outlined.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Abrir") }
+                            if (Storage.canOpen(first)) Button({ openFile(ctx, vm, first) }) { Icon(Icons.Outlined.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Abrir") }
                             FilledTonalButton({ runCatching { ctx.startActivity(Storage.shareIntent(first)) } }) {
                                 Icon(Icons.Outlined.Share, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Compartilhar")
                             }
